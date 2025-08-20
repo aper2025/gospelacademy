@@ -13,6 +13,7 @@ import {
   insertReflectionResponseSchema,
   insertQuizAttemptSchema,
   insertQuizResponseSchema,
+  quizLocks,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -372,6 +373,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error saving reflection response:", error);
       res.status(500).json({ message: "Failed to save reflection response" });
+    }
+  });
+
+  // Quiz lock routes - to implement site locking during quizzes
+  app.get('/api/quiz-lock-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const activeLock = await storage.getActiveQuizLock(userId);
+      res.json({ isLocked: !!activeLock, activeLock });
+    } catch (error) {
+      console.error("Error checking quiz lock status:", error);
+      res.status(500).json({ message: "Failed to check quiz lock status" });
+    }
+  });
+
+  app.post('/api/quiz-locks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { quizId, timeLimit = 30 } = req.body; // Default 30 minutes
+
+      // Check if user already has an active lock
+      const existingLock = await storage.getActiveQuizLock(userId);
+      if (existingLock) {
+        return res.status(400).json({ message: "Quiz already in progress" });
+      }
+
+      const expiresAt = new Date(Date.now() + timeLimit * 60 * 1000);
+      const lock = await storage.createQuizLock({
+        userId,
+        quizId,
+        expiresAt,
+      });
+      
+      res.status(201).json(lock);
+    } catch (error) {
+      console.error("Error creating quiz lock:", error);
+      res.status(500).json({ message: "Failed to create quiz lock" });
+    }
+  });
+
+  app.delete('/api/quiz-locks', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearQuizLock(userId);
+      res.status(200).json({ message: "Quiz lock cleared" });
+    } catch (error) {
+      console.error("Error clearing quiz lock:", error);
+      res.status(500).json({ message: "Failed to clear quiz lock" });
+    }
+  });
+
+  app.get('/api/reflection-responses/:lessonId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const lessonId = parseInt(req.params.lessonId);
+      
+      const responses = await storage.getReflectionResponses(userId, lessonId);
+      res.json(responses);
+    } catch (error) {
+      console.error("Error fetching reflection responses:", error);
+      res.status(500).json({ message: "Failed to fetch reflection responses" });
+    }
+  });
+
+  // Get quiz for a lesson
+  app.get('/api/lessons/:id/quiz', isAuthenticated, async (req: any, res) => {
+    try {
+      const lessonId = parseInt(req.params.id);
+      const quiz = await storage.getQuizByLessonId(lessonId);
+      res.json(quiz);
+    } catch (error) {
+      console.error("Error fetching lesson quiz:", error);
+      res.status(500).json({ message: "Failed to fetch lesson quiz" });
     }
   });
 

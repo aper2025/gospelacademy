@@ -13,6 +13,7 @@ import {
   reflectionResponses,
   quizAttempts,
   quizResponses,
+  quizLocks,
   type User,
   type UpsertUser,
   type Course,
@@ -114,6 +115,11 @@ export interface IStorage {
   // Quiz responses
   createQuizResponse(response: InsertQuizResponse): Promise<QuizResponse>;
   getQuizResponsesByAttempt(attemptId: number): Promise<QuizResponse[]>;
+  
+  // Quiz locks
+  getActiveQuizLock(userId: string): Promise<any>;
+  createQuizLock(lock: { userId: string; quizId: number; expiresAt: Date }): Promise<any>;
+  clearQuizLock(userId: string): Promise<void>;
   
   // Statistics and reporting
   getCourseStats(courseId: number): Promise<{
@@ -462,6 +468,47 @@ export class DatabaseStorage implements IStorage {
         status,
       };
     });
+  }
+
+  // Quiz lock operations
+  async getActiveQuizLock(userId: string): Promise<any> {
+    const [lock] = await db
+      .select()
+      .from(quizLocks)
+      .where(
+        and(
+          eq(quizLocks.userId, userId),
+          sql`${quizLocks.expiresAt} > NOW()`
+        )
+      )
+      .orderBy(desc(quizLocks.createdAt))
+      .limit(1);
+    
+    return lock;
+  }
+
+  async createQuizLock(lockData: { userId: string; quizId: number; expiresAt: Date }): Promise<any> {
+    const [lock] = await db
+      .insert(quizLocks)
+      .values(lockData)
+      .returning();
+    
+    return lock;
+  }
+
+  async clearQuizLock(userId: string): Promise<void> {
+    await db
+      .delete(quizLocks)
+      .where(eq(quizLocks.userId, userId));
+  }
+
+  async getQuizByLessonId(lessonId: number): Promise<any> {
+    const [quiz] = await db
+      .select()
+      .from(quizzes)
+      .where(eq(quizzes.lessonId, lessonId));
+    
+    return quiz;
   }
 }
 

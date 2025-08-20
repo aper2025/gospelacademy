@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Save, MessageCircle } from "lucide-react";
+import { Save, MessageCircle, CheckCircle, XCircle } from "lucide-react";
 import type { ReflectionQuestion } from "@shared/schema";
 
 interface ReflectionQuestionsProps {
@@ -18,6 +19,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
   const { toast } = useToast();
   const [responses, setResponses] = useState<Record<number, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [showFeedback, setShowFeedback] = useState<Record<number, boolean>>({});
 
   // Load existing responses
   const { data: existingResponses } = useQuery({
@@ -38,17 +40,28 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
 
   const saveResponsesMutation = useMutation({
     mutationFn: async (responsesToSave: Record<number, string>) => {
-      const savePromises = Object.entries(responsesToSave).map(([questionId, response]) => 
-        apiRequest("POST", "/api/reflection-responses", {
+      const savePromises = Object.entries(responsesToSave).map(([questionId, response]) => {
+        const question = questions.find(q => q.id === parseInt(questionId));
+        const isCorrect = question?.correctAnswer === response;
+        
+        return apiRequest("POST", "/api/reflection-responses", {
           questionId: parseInt(questionId),
           response,
-        })
-      );
+          isCorrect,
+        });
+      });
       
       await Promise.all(savePromises);
     },
     onSuccess: () => {
       setHasChanges(false);
+      // Show feedback for all questions after saving
+      const feedbackMap: Record<number, boolean> = {};
+      questions.forEach(q => {
+        feedbackMap[q.id] = true;
+      });
+      setShowFeedback(feedbackMap);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/reflection-responses", lessonId] });
       toast({
         title: "Reflections Saved",
@@ -165,26 +178,87 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
               
               {/* Check if the question is multiple choice (contains A), B), C), D)) */}
               {question.question.includes('A)') && question.question.includes('B)') ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {question.question.split('\n').filter(line => line.match(/^[A-D]\)/)).map((option, optIndex) => {
                     const optionLetter = option.charAt(0);
                     const optionText = option.substring(3);
+                    const isSelected = responses[question.id] === optionLetter;
+                    const isCorrect = question.correctAnswer === optionLetter;
+                    const showResult = showFeedback[question.id] && responses[question.id];
+                    
+                    let borderColor = 'border-gray-200 dark:border-gray-700';
+                    let bgColor = 'hover:bg-gray-50 dark:hover:bg-gray-800';
+                    
+                    if (showResult) {
+                      if (isSelected && isCorrect) {
+                        borderColor = 'border-green-500 bg-green-50 dark:bg-green-950';
+                        bgColor = '';
+                      } else if (isSelected && !isCorrect) {
+                        borderColor = 'border-red-500 bg-red-50 dark:bg-red-950';
+                        bgColor = '';
+                      } else if (!isSelected && isCorrect) {
+                        borderColor = 'border-green-300 bg-green-25 dark:bg-green-950/50';
+                        bgColor = '';
+                      }
+                    }
+                    
                     return (
-                      <label key={optIndex} className="flex items-start space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <label key={optIndex} className={`flex items-start space-x-3 cursor-pointer p-3 rounded-lg border transition-colors ${borderColor} ${bgColor}`}>
                         <input
                           type="radio"
                           name={`question-${question.id}`}
                           value={optionLetter}
-                          checked={responses[question.id] === optionLetter}
+                          checked={isSelected}
                           onChange={(e) => handleResponseChange(question.id, e.target.value)}
                           className="mt-1 text-primary focus:ring-primary"
+                          disabled={showResult}
                         />
                         <span className="text-gray-700 dark:text-gray-300 flex-1">
                           <span className="font-medium">{optionLetter})</span> {optionText}
                         </span>
+                        {showResult && isCorrect && (
+                          <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                        )}
+                        {showResult && isSelected && !isCorrect && (
+                          <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                        )}
                       </label>
                     );
                   })}
+                  
+                  {/* Show explanation after answering */}
+                  {showFeedback[question.id] && responses[question.id] && question.explanation && (
+                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-400 rounded-r-lg">
+                      <div className="flex items-start space-x-2">
+                        <div className="flex-shrink-0 mt-1">
+                          {responses[question.id] === question.correctAnswer ? (
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Correct
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Incorrect
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                            Explanation:
+                          </p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            {question.explanation}
+                          </p>
+                          {responses[question.id] !== question.correctAnswer && (
+                            <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                              <strong>Correct answer:</strong> {question.correctAnswer})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Textarea

@@ -76,6 +76,8 @@ export const reflectionQuestions = pgTable("reflection_questions", {
   id: serial("id").primaryKey(),
   lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
   question: text("question").notNull(),
+  correctAnswer: varchar("correct_answer", { length: 1 }),
+  explanation: text("explanation"),
   orderIndex: integer("order_index").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -149,7 +151,18 @@ export const reflectionResponses = pgTable("reflection_responses", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   questionId: integer("question_id").references(() => reflectionQuestions.id).notNull(),
   response: text("response"),
+  isCorrect: boolean("is_correct"),
   submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
+// Quiz Locks table - to lock the site when taking a quiz
+export const quizLocks = pgTable("quiz_locks", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  quizId: integer("quiz_id").references(() => quizzes.id).notNull(),
+  lockedAt: timestamp("locked_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Quiz Attempts table
