@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
+import Unit from "@/pages/unit";
 import Lesson from "@/pages/lesson";
 import Quiz from "@/pages/quiz";
 import TeacherDashboard from "@/pages/teacher-dashboard";
@@ -21,6 +22,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/unit/:id" component={Unit} />
           <Route path="/lesson/:id" component={Lesson} />
           <Route path="/quiz/:id" component={Quiz} />
           <Route path="/teacher" component={TeacherDashboard} />

@@ -110,8 +110,8 @@ export default function Dashboard() {
                     Pick up where you left off in your current lesson
                   </CardDescription>
                   <Button className="w-full" asChild>
-                    <Link href="/lesson/3">
-                      Continue Lesson 3
+                    <Link href="/lesson/1">
+                      Start Chapter 1
                     </Link>
                   </Button>
                 </CardContent>
@@ -127,8 +127,8 @@ export default function Dashboard() {
                     Test your knowledge with the latest quiz
                   </CardDescription>
                   <Button variant="secondary" className="w-full" asChild>
-                    <Link href="/quiz/3">
-                      Start Quiz 3
+                    <Link href="/quiz/5">
+                      Chapter 1 Quiz
                     </Link>
                   </Button>
                 </CardContent>

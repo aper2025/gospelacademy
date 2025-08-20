@@ -14,7 +14,7 @@ export default function Sidebar() {
       current: location === "/",
     },
     {
-      name: "Unit 1: Introduction",
+      name: "Unit 1: Setting the Stage for the King",
       href: "/unit/1",
       icon: BookOpen,
       current: location.startsWith("/unit/1"),
