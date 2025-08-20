@@ -145,7 +145,9 @@ export default function Lesson() {
   const isLessonCompleted = currentLessonProgress?.isCompleted;
   const reflectionQuestionCount = reflectionQuestions?.length || 0;
   const reflectionResponseCount = reflectionResponses?.length || 0;
-  const areReflectionsCompleted = reflectionQuestionCount > 0 && reflectionResponseCount >= reflectionQuestionCount;
+  
+  // For reflection questions, we consider them completed if there's a response (not necessarily correct)
+  const areReflectionsCompleted = reflectionQuestionCount === 0 || reflectionResponseCount >= reflectionQuestionCount;
   const canTakeQuiz = isLessonCompleted && areReflectionsCompleted && quiz;
 
   return (

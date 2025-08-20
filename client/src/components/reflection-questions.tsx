@@ -10,8 +10,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Save, MessageCircle, CheckCircle, XCircle } from "lucide-react";
 import type { ReflectionQuestion } from "@shared/schema";
 
+interface ExtendedReflectionQuestion extends ReflectionQuestion {
+  correctAnswer?: string | null;
+  explanation?: string | null;
+}
+
 interface ReflectionQuestionsProps {
-  questions: ReflectionQuestion[];
+  questions: ExtendedReflectionQuestion[];
   lessonId: number;
 }
 
@@ -42,7 +47,10 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
     mutationFn: async (responsesToSave: Record<number, string>) => {
       const savePromises = Object.entries(responsesToSave).map(([questionId, response]) => {
         const question = questions.find(q => q.id === parseInt(questionId));
-        const isCorrect = question?.correctAnswer === response;
+        // For open-ended questions, mark as correct if a response is provided
+        const isCorrect = question?.correctAnswer ? 
+          question.correctAnswer === response : 
+          response.trim().length > 0;
         
         return apiRequest("POST", "/api/reflection-responses", {
           questionId: parseInt(questionId),
@@ -183,7 +191,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
                     const optionLetter = option.charAt(0);
                     const optionText = option.substring(3);
                     const isSelected = responses[question.id] === optionLetter;
-                    const isCorrect = question.correctAnswer === optionLetter;
+                    const isCorrect = question.correctAnswer ? question.correctAnswer === optionLetter : false;
                     const showResult = showFeedback[question.id] && responses[question.id];
                     
                     let borderColor = 'border-gray-200 dark:border-gray-700';
@@ -231,7 +239,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
                     <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-400 rounded-r-lg">
                       <div className="flex items-start space-x-2">
                         <div className="flex-shrink-0 mt-1">
-                          {responses[question.id] === question.correctAnswer ? (
+                          {question.correctAnswer && responses[question.id] === question.correctAnswer ? (
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Correct
@@ -248,11 +256,11 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
                             Explanation:
                           </p>
                           <p className="text-sm text-blue-700 dark:text-blue-300">
-                            {question.explanation}
+                            {question.explanation || "No explanation provided"}
                           </p>
-                          {responses[question.id] !== question.correctAnswer && (
+                          {question.correctAnswer && responses[question.id] !== question.correctAnswer && (
                             <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                              <strong>Correct answer:</strong> {question.correctAnswer})
+                              <strong>Correct answer:</strong> {question.correctAnswer || "Not specified"})
                             </p>
                           )}
                         </div>
