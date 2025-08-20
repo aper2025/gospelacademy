@@ -216,6 +216,21 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
+  // Parse options if they're a JSON string
+  let parsedOptions: Record<string, string> = {};
+  try {
+    if (typeof currentQuestion.options === 'string') {
+      parsedOptions = JSON.parse(currentQuestion.options);
+    } else if (typeof currentQuestion.options === 'object' && currentQuestion.options !== null) {
+      parsedOptions = currentQuestion.options as Record<string, string>;
+    }
+  } catch (error) {
+    console.error('Error parsing question options:', error);
+  }
+
+  // Convert options object to array format
+  const optionEntries = Object.entries(parsedOptions);
+
   return (
     <Card className="card-shadow">
       <CardContent className="p-8">
@@ -263,8 +278,8 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
               onValueChange={handleAnswerChange}
               className="space-y-3"
             >
-              {(currentQuestion.options as string[]).map((option, optionIndex) => {
-                const optionValue = String.fromCharCode(97 + optionIndex); // a, b, c, d
+              {optionEntries.map(([optionKey, optionText], optionIndex) => {
+                const optionValue = optionKey.toLowerCase(); // a, b, c, d
                 return (
                   <div key={optionValue}>
                     <Label 
@@ -277,7 +292,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
                         className="text-primary"
                       />
                       <span className="ml-3 text-gray-700 dark:text-gray-300">
-                        {option}
+                        {optionKey}. {optionText}
                       </span>
                     </Label>
                   </div>
