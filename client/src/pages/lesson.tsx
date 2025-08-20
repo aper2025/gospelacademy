@@ -15,7 +15,7 @@ import LessonViewer from "@/components/lesson-viewer";
 import ReflectionQuestions from "@/components/reflection-questions";
 
 export default function Lesson() {
-  const [, params] = useRoute("/lesson/:id");
+  const [, params] = useRoute("/lessons/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
