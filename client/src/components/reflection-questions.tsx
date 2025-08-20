@@ -159,16 +159,42 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
                 Question {index + 1}:
               </h4>
-              <p className="text-gray-700 dark:text-gray-300 mb-4">
+              <div className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">
                 {question.question}
-              </p>
-              <Textarea
-                value={responses[question.id] || ""}
-                onChange={(e) => handleResponseChange(question.id, e.target.value)}
-                className="w-full resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                rows={4}
-                placeholder="Type your reflection here..."
-              />
+              </div>
+              
+              {/* Check if the question is multiple choice (contains A), B), C), D)) */}
+              {question.question.includes('A)') && question.question.includes('B)') ? (
+                <div className="space-y-2">
+                  {question.question.split('\n').filter(line => line.match(/^[A-D]\)/)).map((option, optIndex) => {
+                    const optionLetter = option.charAt(0);
+                    const optionText = option.substring(3);
+                    return (
+                      <label key={optIndex} className="flex items-start space-x-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <input
+                          type="radio"
+                          name={`question-${question.id}`}
+                          value={optionLetter}
+                          checked={responses[question.id] === optionLetter}
+                          onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                          className="mt-1 text-primary focus:ring-primary"
+                        />
+                        <span className="text-gray-700 dark:text-gray-300 flex-1">
+                          <span className="font-medium">{optionLetter})</span> {optionText}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Textarea
+                  value={responses[question.id] || ""}
+                  onChange={(e) => handleResponseChange(question.id, e.target.value)}
+                  className="w-full resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows={4}
+                  placeholder="Type your reflection here..."
+                />
+              )}
             </CardContent>
           </Card>
         ))}
