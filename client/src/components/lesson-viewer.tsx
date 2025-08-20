@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { 
   BookmarkPlus, 
@@ -14,7 +15,9 @@ import {
   Video,
   ExternalLink,
   MapPin,
-  PlayCircle
+  PlayCircle,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import type { Lesson, AdditionalResource } from "@shared/schema";
 
@@ -32,11 +35,62 @@ export default function LessonViewer({
   isCompleting 
 }: LessonViewerProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const handleSave = () => {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
+
+  // Parse lesson content into steps
+  const lessonSteps = useMemo(() => {
+    if (!lesson.content) return [];
+    
+    const content = lesson.content;
+    const stepSections = content.split(/STEP \d+:/);
+    
+    // Remove the first empty element and process each step
+    const steps = stepSections.slice(1).map((section, index) => {
+      const lines = section.trim().split('\n');
+      const title = lines[0]?.trim() || `Step ${index + 1}`;
+      const content = lines.slice(1).join('\n').trim();
+      
+      return {
+        id: index + 1,
+        title: title,
+        content: content
+      };
+    });
+
+    // If no steps found, create introduction step
+    if (steps.length === 0) {
+      const introContent = content.split('STEP 1:')[0] || content;
+      return [{
+        id: 1,
+        title: 'Introduction',
+        content: introContent
+      }];
+    }
+
+    return steps;
+  }, [lesson.content]);
+
+  const totalSteps = lessonSteps.length;
+  const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0;
+
+  const goToNextStep = () => {
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const currentStepData = lessonSteps[currentStep] || { title: 'Loading...', content: '' };
 
   const getResourceIcon = (type: string) => {
     switch (type) {
@@ -67,13 +121,14 @@ export default function LessonViewer({
   return (
     <Card className="card-shadow">
       <CardContent className="p-8">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {lesson.title}
             </h2>
             <p className="text-muted mt-1">
-              Unit {lesson.unitId}: Life of Christ • {lesson.duration || 25} minutes
+              Unit {lesson.unitId}: Setting the Stage for the King • {lesson.duration || 60} minutes
             </p>
           </div>
           <div className="flex space-x-2">
@@ -85,70 +140,103 @@ export default function LessonViewer({
               <BookmarkPlus className="h-4 w-4 mr-2" />
               {isSaved ? 'Saved!' : 'Save'}
             </Button>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Step {currentStep + 1} of {totalSteps}
+            </span>
+            <span className="text-sm text-muted">
+              {Math.round(progress)}% Complete
+            </span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
+
+        {/* Current Step Content */}
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-900 dark:text-white">
+              {currentStepData.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose max-w-none dark:prose-invert">
+              <div className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-4 whitespace-pre-line">
+                {currentStepData.content}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Navigation Controls */}
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="outline"
+            onClick={goToPreviousStep}
+            disabled={currentStep === 0}
+            className="flex items-center"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          
+          <div className="flex space-x-2">
+            {lessonSteps.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentStep(index)}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentStep
+                    ? 'bg-primary'
+                    : index < currentStep
+                    ? 'bg-primary/50'
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+
+          {currentStep < totalSteps - 1 ? (
+            <Button onClick={goToNextStep} className="flex items-center">
+              Next
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
             <Button
               onClick={onComplete}
               disabled={isCompleting}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-green-600 hover:bg-green-700 flex items-center"
             >
               <Play className="h-4 w-4 mr-2" />
-              {isCompleting ? 'Completing...' : 'Continue'}
+              {isCompleting ? 'Completing...' : 'Complete Lesson'}
             </Button>
-          </div>
+          )}
         </div>
 
-        {/* Learning Objectives */}
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Learning Objectives
-          </h3>
-          <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
-            <li>Understand the significance of Jesus' baptism and temptation</li>
-            <li>Explore the calling of the first disciples</li>
-            <li>Examine the early miracles and their meanings</li>
-            <li>Analyze the Sermon on the Mount and its teachings</li>
-          </ul>
-        </div>
-
-        {/* Lesson Content */}
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Lesson Content
-          </h3>
-          
-          <div className="bg-blue-50 dark:bg-blue-950/20 border-l-4 border-primary p-6 mb-6">
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              Jesus' ministry began with His baptism by John the Baptist, marking the start of His public ministry. This event was accompanied by the Holy Spirit descending like a dove and God's voice declaring Jesus as His beloved Son. Immediately following this, Jesus was led into the wilderness where He faced temptation for forty days, emerging victorious and ready to begin His earthly mission.
-            </p>
-          </div>
-
-          <div className="prose max-w-none dark:prose-invert">
-            <div 
-              className="text-gray-700 dark:text-gray-300 leading-relaxed space-y-4"
-              dangerouslySetInnerHTML={{ 
-                __html: lesson.content || `
-                  <p>The calling of the first disciples demonstrates Jesus' method of building His ministry team. Rather than choosing religious scholars or influential leaders, Jesus called ordinary fishermen, tax collectors, and other common people. This choice reveals God's preference for humble hearts over worldly credentials.</p>
-                  
-                  <p>Throughout His early ministry, Jesus performed numerous miracles that served multiple purposes: demonstrating His divine authority, meeting human needs, and providing signs pointing to His identity as the Messiah. These miracles included healing the sick, feeding the hungry, and even raising the dead.</p>
-                `
-              }}
-            />
-          </div>
-
-          {/* Video Section */}
-          {lesson.videoUrl && (
-            <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center my-6">
+        {/* Video Section */}
+        {lesson.videoUrl && (
+          <Card className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 mb-8">
+            <CardContent className="p-8 text-center">
               <PlayCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 dark:text-gray-400 font-medium">
-                Video: The Baptism and Temptation of Jesus
+                Video: Chapter 1 - The Intertestamental Period
               </p>
-              <p className="text-sm text-muted mt-2">Duration: 12:30</p>
-              <Button className="mt-4" variant="outline">
+              <p className="text-sm text-muted mt-2">Duration: {lesson.duration || 60} minutes</p>
+              <Button 
+                className="mt-4" 
+                variant="outline"
+                onClick={() => window.open(lesson.videoUrl, '_blank')}
+              >
                 <Play className="h-4 w-4 mr-2" />
                 Play Video
               </Button>
-            </div>
-          )}
-        </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Additional Resources Section */}
         {additionalResources.length > 0 && (
@@ -158,103 +246,36 @@ export default function LessonViewer({
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {additionalResources.map((resource) => (
-                <div
+                <Card
                   key={resource.id}
-                  className={`border border-gray-200 dark:border-gray-600 rounded-lg p-4 transition-colors ${getResourceColor(resource.type || 'article')}`}
+                  className={`transition-colors cursor-pointer ${getResourceColor(resource.type || 'article')}`}
+                  onClick={() => resource.url && window.open(resource.url, '_blank')}
                 >
-                  <div className="flex items-start space-x-3">
-                    {getResourceIcon(resource.type || 'article')}
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white">
-                        {resource.title}
-                      </h4>
-                      <p className="text-sm text-muted mt-1">
-                        {resource.description}
-                      </p>
-                      {resource.url && (
-                        <a
-                          href={resource.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary text-sm font-medium hover:underline mt-2 inline-flex items-center"
-                        >
-                          {resource.type === 'video' ? 'Watch Video' : 
-                           resource.type === 'map' ? 'View Map' : 'Read Article'}
-                          <ExternalLink className="h-3 w-3 ml-1" />
-                        </a>
-                      )}
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      {getResourceIcon(resource.type || 'article')}
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">
+                          {resource.title}
+                        </h4>
+                        <p className="text-sm text-muted mt-1">
+                          {resource.description}
+                        </p>
+                        {resource.url && (
+                          <span className="text-primary text-sm font-medium hover:underline mt-2 inline-flex items-center">
+                            {resource.type === 'video' ? 'Watch Video' : 
+                             resource.type === 'map' ? 'View Map' : 'Read Article'}
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
-              
-              {/* Default resources if none provided */}
-              {additionalResources.length === 0 && (
-                <>
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-primary transition-colors">
-                    <div className="flex items-start space-x-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                          Historical Context: First Century Palestine
-                        </h4>
-                        <p className="text-sm text-muted mt-1">
-                          Supplementary reading about the political and social environment of Jesus' time
-                        </p>
-                        <span className="text-primary text-sm font-medium hover:underline mt-2 inline-block cursor-pointer">
-                          Read Article
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-accent transition-colors">
-                    <div className="flex items-start space-x-3">
-                      <Video className="h-5 w-5 text-accent" />
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white">
-                          Documentary: Archaeology of the Gospels
-                        </h4>
-                        <p className="text-sm text-muted mt-1">
-                          Archaeological evidence supporting Gospel accounts
-                        </p>
-                        <span className="text-accent text-sm font-medium hover:underline mt-2 inline-block cursor-pointer">
-                          Watch Video
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         )}
-
-        {/* Lesson Actions */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
-          <div className="flex justify-between items-center">
-            <Button variant="outline" className="text-gray-700 dark:text-gray-300">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Previous Lesson
-            </Button>
-            <div className="space-x-3">
-              <Button 
-                variant="outline" 
-                className="bg-accent hover:bg-accent/90 text-white border-accent"
-                asChild
-              >
-                <Link href={`/quiz/${lesson.id}`}>
-                  <Vote className="h-4 w-4 mr-2" />
-                  Take Vote
-                </Link>
-              </Button>
-              <Button className="bg-primary hover:bg-primary/90">
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Next Lesson
-              </Button>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
