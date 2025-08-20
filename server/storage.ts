@@ -371,15 +371,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrUpdateReflectionResponse(responseData: InsertReflectionResponse): Promise<ReflectionResponse> {
-    const [response] = await db
-      .insert(reflectionResponses)
-      .values(responseData)
-      .onConflictDoUpdate({
-        target: [reflectionResponses.userId, reflectionResponses.questionId],
-        set: responseData,
-      })
-      .returning();
-    return response;
+    // Check if response already exists
+    const existing = await this.getReflectionResponse(responseData.userId, responseData.questionId);
+    
+    if (existing) {
+      // Update existing response
+      const [response] = await db
+        .update(reflectionResponses)
+        .set(responseData)
+        .where(and(
+          eq(reflectionResponses.userId, responseData.userId),
+          eq(reflectionResponses.questionId, responseData.questionId)
+        ))
+        .returning();
+      return response;
+    } else {
+      // Create new response
+      const [response] = await db
+        .insert(reflectionResponses)
+        .values(responseData)
+        .returning();
+      return response;
+    }
   }
 
   // Quiz attempts
