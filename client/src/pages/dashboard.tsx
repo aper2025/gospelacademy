@@ -45,6 +45,9 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
+  // Type guard for progress data
+  const progressArray = Array.isArray(progress) ? progress : [];
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -110,7 +113,7 @@ export default function Dashboard() {
                     Pick up where you left off in your current lesson
                   </CardDescription>
                   <Button className="w-full" asChild>
-                    <Link href="/lesson/1">
+                    <Link href="/lessons/1">
                       Start Chapter 1
                     </Link>
                   </Button>
@@ -126,11 +129,27 @@ export default function Dashboard() {
                   <CardDescription className="mb-4">
                     Test your knowledge with the latest quiz
                   </CardDescription>
-                  <Button variant="secondary" className="w-full" asChild>
-                    <Link href="/quiz/5">
-                      Chapter 1 Quiz
-                    </Link>
-                  </Button>
+                  {(() => {
+                    // Check if lesson 1 is completed
+                    const lesson1Progress = progressArray.find((p: any) => p.lessonId === 1);
+                    const isLessonCompleted = lesson1Progress?.isCompleted;
+                    
+                    if (!isLessonCompleted) {
+                      return (
+                        <Button variant="secondary" className="w-full" disabled>
+                          Complete Lesson First
+                        </Button>
+                      );
+                    }
+                    
+                    return (
+                      <Button variant="secondary" className="w-full" asChild>
+                        <Link href="/quiz/5">
+                          Chapter 1 Quiz
+                        </Link>
+                      </Button>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 

@@ -455,9 +455,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const quizId = parseInt(req.params.quizId);
       
+      // Get the quiz to find its lesson
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ message: "Quiz not found" });
+      }
+      
+      // Check if the lesson is completed before allowing quiz access
+      const lessonProgress = await storage.getLessonProgress(userId, quiz.lessonId);
+      if (!lessonProgress || !lessonProgress.isCompleted) {
+        return res.status(403).json({ message: "You must complete the lesson before taking the quiz" });
+      }
+      
+      // Check if there's already an active quiz session
+      const existingLock = await storage.getActiveQuizLock(userId);
+      if (existingLock) {
+        return res.status(400).json({ message: "You already have an active quiz session" });
+      }
+      
       const attempt = await storage.createQuizAttempt({
         userId,
         quizId,
+      });
+      
+      // Create quiz lock
+      await storage.createQuizLock({
+        userId,
+        quizId,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
       });
       
       res.status(201).json(attempt);
