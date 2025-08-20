@@ -64,8 +64,8 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
       
       queryClient.invalidateQueries({ queryKey: ["/api/reflection-responses", lessonId] });
       toast({
-        title: "Reflections Saved",
-        description: "Your reflection responses have been saved successfully.",
+        title: "Reflections Submitted",
+        description: "Your reflection responses have been submitted successfully.",
       });
     },
     onError: (error) => {
@@ -82,7 +82,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
       }
       toast({
         title: "Error",
-        description: "Failed to save reflections. Please try again.",
+        description: "Failed to submit reflections. Please try again.",
         variant: "destructive",
       });
     },
@@ -105,7 +105,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
     if (Object.keys(responsesToSave).length === 0) {
       toast({
         title: "No Responses",
-        description: "Please provide at least one reflection response before saving.",
+        description: "Please provide at least one reflection response before submitting.",
         variant: "destructive",
       });
       return;
@@ -278,7 +278,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
         <div>
           {hasChanges && (
             <span className="text-sm text-muted">
-              You have unsaved changes
+              You have unsubmitted changes
             </span>
           )}
         </div>
@@ -288,7 +288,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
           className="bg-secondary hover:bg-secondary/90"
         >
           <Save className="h-4 w-4 mr-2" />
-          {saveResponsesMutation.isPending ? 'Saving...' : 'Save Reflections'}
+          {saveResponsesMutation.isPending ? 'Submitting...' : 'Submit Reflections'}
         </Button>
       </div>
     </div>

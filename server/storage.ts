@@ -327,15 +327,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrUpdateLessonProgress(progressData: InsertLessonProgress): Promise<LessonProgress> {
-    const [progress] = await db
-      .insert(lessonProgress)
-      .values(progressData)
-      .onConflictDoUpdate({
-        target: [lessonProgress.userId, lessonProgress.lessonId],
-        set: progressData,
-      })
-      .returning();
-    return progress;
+    // First try to find existing progress
+    const [existing] = await db
+      .select()
+      .from(lessonProgress)
+      .where(
+        and(
+          eq(lessonProgress.userId, progressData.userId),
+          eq(lessonProgress.lessonId, progressData.lessonId)
+        )
+      );
+
+    if (existing) {
+      // Update existing record
+      const [progress] = await db
+        .update(lessonProgress)
+        .set(progressData)
+        .where(eq(lessonProgress.id, existing.id))
+        .returning();
+      
+      return progress;
+    } else {
+      // Create new record
+      const [progress] = await db
+        .insert(lessonProgress)
+        .values(progressData)
+        .returning();
+      
+      return progress;
+    }
   }
 
   async getLessonProgressByUser(userId: string): Promise<LessonProgress[]> {
@@ -509,6 +529,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(quizzes.lessonId, lessonId));
     
     return quiz;
+  }
+
+  async getReflectionResponses(userId: string, lessonId: number): Promise<any[]> {
+    const responses = await db
+      .select()
+      .from(reflectionResponses)
+      .innerJoin(reflectionQuestions, eq(reflectionResponses.questionId, reflectionQuestions.id))
+      .where(
+        and(
+          eq(reflectionResponses.userId, userId),
+          eq(reflectionQuestions.lessonId, lessonId)
+        )
+      );
+    
+    return responses;
   }
 }
 

@@ -25,7 +25,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/unit/:id" component={Unit} />
-          <Route path="/lesson/:id" component={Lesson} />
+          <Route path="/lessons/:id" component={Lesson} />
           <Route path="/quiz/:id" component={Quiz} />
           <Route path="/teacher" component={TeacherDashboard} />
         </>
