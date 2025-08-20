@@ -6,12 +6,12 @@ import { Progress } from "@/components/ui/progress";
 export default function ProgressWidget() {
   const { isAuthenticated } = useAuth();
 
-  const { data: progress } = useQuery({
+  const { data: progress } = useQuery<any[]>({
     queryKey: ["/api/my-progress"],
     enabled: isAuthenticated,
   });
 
-  const { data: enrollments } = useQuery({
+  const { data: enrollments } = useQuery<any[]>({
     queryKey: ["/api/my-enrollments"],
     enabled: isAuthenticated,
   });

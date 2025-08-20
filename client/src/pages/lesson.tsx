@@ -32,17 +32,17 @@ export default function Lesson() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: lesson, isLoading: lessonLoading } = useQuery({
+  const { data: lesson, isLoading: lessonLoading } = useQuery<any>({
     queryKey: ["/api/lessons", lessonId.toString()],
     enabled: isAuthenticated && lessonId > 0,
   });
 
-  const { data: reflectionQuestions } = useQuery({
+  const { data: reflectionQuestions } = useQuery<any[]>({
     queryKey: ["/api/lessons", lessonId.toString(), "reflection-questions"],
     enabled: isAuthenticated && lessonId > 0,
   });
 
-  const { data: additionalResources } = useQuery({
+  const { data: additionalResources } = useQuery<any[]>({
     queryKey: ["/api/lessons", lessonId.toString(), "resources"],
     enabled: isAuthenticated && lessonId > 0,
   });

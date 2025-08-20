@@ -29,7 +29,7 @@ export default function ReflectionQuestions({ questions, lessonId }: ReflectionQ
   useEffect(() => {
     if (existingResponses) {
       const responseMap: Record<number, string> = {};
-      existingResponses.forEach((response: any) => {
+      (existingResponses as any[]).forEach((response: any) => {
         responseMap[response.questionId] = response.response || "";
       });
       setResponses(responseMap);

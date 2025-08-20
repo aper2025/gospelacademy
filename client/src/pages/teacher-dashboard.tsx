@@ -28,12 +28,12 @@ export default function TeacherDashboard() {
     }
   }, [isAuthenticated, isLoading, user, toast]);
 
-  const { data: courseStats } = useQuery({
+  const { data: courseStats } = useQuery<any>({
     queryKey: ["/api/courses/1/stats"],
     enabled: isAuthenticated && user?.role === 'teacher',
   });
 
-  const { data: studentActivity } = useQuery({
+  const { data: studentActivity } = useQuery<any[]>({
     queryKey: ["/api/courses/1/student-activity"],
     enabled: isAuthenticated && user?.role === 'teacher',
   });
@@ -171,7 +171,7 @@ export default function TeacherDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {studentActivity?.map((student, index) => (
+                  {studentActivity?.map((student: any, index: number) => (
                     <tr key={student.userId}>
                       <td className="py-4 px-4 font-medium text-gray-900 dark:text-gray-100">
                         {student.userName}

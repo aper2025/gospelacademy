@@ -29,12 +29,12 @@ export default function Quiz() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: quiz, isLoading: quizLoading } = useQuery({
+  const { data: quiz, isLoading: quizLoading } = useQuery<any>({
     queryKey: ["/api/quizzes", quizId.toString()],
     enabled: isAuthenticated && quizId > 0,
   });
 
-  const { data: questions } = useQuery({
+  const { data: questions } = useQuery<any[]>({
     queryKey: ["/api/quizzes", quizId.toString(), "questions"],
     enabled: isAuthenticated && quizId > 0,
   });
