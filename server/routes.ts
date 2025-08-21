@@ -473,11 +473,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if the lesson is completed before allowing quiz access
-      // Temporarily disabled to allow quiz testing
-      // const lessonProgress = await storage.getLessonProgress(userId, quiz.lessonId);
-      // if (!lessonProgress || !lessonProgress.isCompleted) {
-      //   return res.status(403).json({ message: "You must complete the lesson before taking the quiz" });
-      // }
+      const lessonProgress = await storage.getLessonProgress(userId, quiz.lessonId);
+      if (!lessonProgress || !lessonProgress.isCompleted) {
+        return res.status(403).json({ message: "You must complete the lesson before taking the quiz" });
+      }
       
       // Check if there's already an active quiz session
       const existingLock = await storage.getActiveQuizLock(userId);
