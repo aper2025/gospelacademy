@@ -86,16 +86,16 @@ export default function Dashboard() {
               <CardContent className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">12</div>
-                    <div className="text-sm text-muted">Lessons</div>
+                    <div className="text-2xl font-bold text-primary">18</div>
+                    <div className="text-sm text-muted">Chapters</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-secondary">8 weeks</div>
+                    <div className="text-2xl font-bold text-secondary">18 weeks</div>
                     <div className="text-sm text-muted">Duration</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-accent">4</div>
-                    <div className="text-sm text-muted">Assessments</div>
+                    <div className="text-2xl font-bold text-accent">18</div>
+                    <div className="text-sm text-muted">Quizzes</div>
                   </div>
                 </div>
               </CardContent>
@@ -113,7 +113,7 @@ export default function Dashboard() {
                     Pick up where you left off in your current lesson
                   </CardDescription>
                   <Button className="w-full" asChild>
-                    <Link href="/lessons/1">
+                    <Link href="/lessons/17">
                       Start Chapter 1
                     </Link>
                   </Button>
@@ -130,8 +130,8 @@ export default function Dashboard() {
                     Test your knowledge with the latest quiz
                   </CardDescription>
                   {(() => {
-                    // Check if lesson 1 is completed
-                    const lesson1Progress = progressArray.find((p: any) => p.lessonId === 1);
+                    // Check if lesson 17 is completed (Chapter 1)
+                    const lesson1Progress = progressArray.find((p: any) => p.lessonId === 17);
                     const isLessonCompleted = lesson1Progress?.isCompleted;
                     
                     if (!isLessonCompleted) {
@@ -144,7 +144,7 @@ export default function Dashboard() {
                     
                     return (
                       <Button variant="secondary" className="w-full" asChild>
-                        <Link href="/quiz/5">
+                        <Link href="/quiz/18">
                           Chapter 1 Quiz
                         </Link>
                       </Button>
@@ -196,36 +196,148 @@ export default function Dashboard() {
               </Card>
             )}
 
-            {/* Recent Activity */}
+            {/* Course Units */}
             <Card className="card-shadow">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your latest learning activities</CardDescription>
+                <CardTitle>Course Structure</CardTitle>
+                <CardDescription>All 18 chapters organized into 4 units</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Completed Lesson 2: The Ministry Begins</div>
-                      <div className="text-sm text-muted">2 hours ago</div>
+                <div className="space-y-6">
+                  {/* Unit 1 */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-primary">Unit 1: Setting the Stage for the King</h3>
+                    <div className="space-y-2">
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/17">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 1: The Intertestamental Period
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/18">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 2: Political and Religious World
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/19">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 3: Introduction to the Four Gospels
+                        </Link>
+                      </Button>
                     </div>
-                    <div className="text-sm text-secondary font-medium">Completed</div>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Quiz 2 Score: 89%</div>
-                      <div className="text-sm text-muted">1 day ago</div>
+
+                  {/* Unit 2 */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-primary">Unit 2: The Early Life and Ministry of Jesus</h3>
+                    <div className="space-y-2">
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/20">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 4: The Incarnation - Birth of Jesus
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/21">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 5: Baptism and Temptation
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/22">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 6: Calling of the Twelve Disciples
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/23">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 7: Jesus' Early Miracles
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/24">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 8: The Growing Opposition
+                        </Link>
+                      </Button>
                     </div>
-                    <div className="text-sm text-secondary font-medium">Passed</div>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Reflection Questions Submitted</div>
-                      <div className="text-sm text-muted">3 days ago</div>
+
+                  {/* Unit 3 */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-primary">Unit 3: The Teachings of Jesus</h3>
+                    <div className="space-y-2">
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/25">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 9: The Sermon on the Mount
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/26">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 10: The Parables of the Kingdom
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/27">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 11: The 'I AM' Statements
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/28">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 12: Miracles and Their Meaning
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/29">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 13: The Upper Room Discourse
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/30">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 14: Final Teachings and Warnings
+                        </Link>
+                      </Button>
                     </div>
-                    <div className="text-sm text-accent font-medium">Submitted</div>
+                  </div>
+
+                  {/* Unit 4 */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-primary">Unit 4: The Climax of the Gospels</h3>
+                    <div className="space-y-2">
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/31">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 15: Triumphal Entry and Final Week
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/32">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 16: The Last Supper and Gethsemane
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/33">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 17: The Trials, Crucifixion, and Death
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" asChild>
+                        <Link href="/lessons/34">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Chapter 18: The Resurrection
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
