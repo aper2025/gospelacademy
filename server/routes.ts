@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertCourseSchema,
   insertUnitSchema,
@@ -16,26 +17,14 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // For development - create a mock auth user if none exists
-  const mockUserId = '41670901';
-  
-  // Auth routes - simplified for development
-  app.get('/api/auth/user', async (req: any, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      // Try to get existing user
-      let user = await storage.getUser(mockUserId);
-      
-      // Create user if doesn't exist
-      if (!user) {
-        user = await storage.upsertUser({
-          id: mockUserId,
-          email: 'student@example.com',
-          firstName: 'Demo',
-          lastName: 'Student',
-          profileImageUrl: null,
-        });
-      }
-      
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -43,8 +32,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Course routes  
-  app.get('/api/courses', async (req, res) => {
+  // Course routes
+  app.get('/api/courses', isAuthenticated, async (req, res) => {
     try {
       const courses = await storage.getCourses();
       res.json(courses);
@@ -54,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/courses/:id', async (req, res) => {
+  app.get('/api/courses/:id', isAuthenticated, async (req, res) => {
     try {
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourse(courseId);
@@ -68,9 +57,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/courses', async (req: any, res) => {
+  app.post('/api/courses', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -91,7 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unit routes
-  app.get('/api/courses/:courseId/units', async (req, res) => {
+  app.get('/api/courses/:courseId/units', isAuthenticated, async (req, res) => {
     try {
       const courseId = parseInt(req.params.courseId);
       const units = await storage.getUnitsByCourse(courseId);
@@ -102,9 +91,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/units', async (req: any, res) => {
+  app.post('/api/units', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -121,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Lesson routes
-  app.get('/api/units/:unitId/lessons', async (req, res) => {
+  app.get('/api/units/:unitId/lessons', isAuthenticated, async (req, res) => {
     try {
       const unitId = parseInt(req.params.unitId);
       const lessons = await storage.getLessonsByUnit(unitId);
@@ -132,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/lessons/:id', async (req, res) => {
+  app.get('/api/lessons/:id', isAuthenticated, async (req, res) => {
     try {
       const lessonId = parseInt(req.params.id);
       const lesson = await storage.getLesson(lessonId);
@@ -146,9 +135,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/lessons', async (req: any, res) => {
+  app.post('/api/lessons', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -164,9 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/lessons/:id', async (req: any, res) => {
+  app.put('/api/lessons/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -189,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reflection questions
-  app.get('/api/lessons/:lessonId/reflection-questions', async (req, res) => {
+  app.get('/api/lessons/:lessonId/reflection-questions', isAuthenticated, async (req, res) => {
     try {
       const lessonId = parseInt(req.params.lessonId);
       const questions = await storage.getReflectionQuestionsByLesson(lessonId);
@@ -200,9 +189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/reflection-questions', async (req: any, res) => {
+  app.post('/api/reflection-questions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -219,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Additional resources
-  app.get('/api/lessons/:lessonId/resources', async (req, res) => {
+  app.get('/api/lessons/:lessonId/resources', isAuthenticated, async (req, res) => {
     try {
       const lessonId = parseInt(req.params.lessonId);
       const resources = await storage.getAdditionalResourcesByLesson(lessonId);
@@ -230,9 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/resources', async (req: any, res) => {
+  app.post('/api/resources', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -249,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz routes
-  app.get('/api/lessons/:lessonId/quizzes', async (req, res) => {
+  app.get('/api/lessons/:lessonId/quizzes', isAuthenticated, async (req, res) => {
     try {
       const lessonId = parseInt(req.params.lessonId);
       const quizzes = await storage.getQuizzesByLesson(lessonId);
@@ -260,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/quizzes/:id', async (req, res) => {
+  app.get('/api/quizzes/:id', isAuthenticated, async (req, res) => {
     try {
       const quizId = parseInt(req.params.id);
       const quiz = await storage.getQuiz(quizId);
@@ -274,7 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/quizzes/:id/questions', async (req, res) => {
+  app.get('/api/quizzes/:id/questions', isAuthenticated, async (req, res) => {
     try {
       const quizId = parseInt(req.params.id);
       const questions = await storage.getQuizQuestionsByQuiz(quizId);
@@ -285,9 +274,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/quizzes', async (req: any, res) => {
+  app.post('/api/quizzes', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -304,9 +293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Course enrollment
-  app.get('/api/my-enrollments', async (req: any, res) => {
+  app.get('/api/my-enrollments', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const enrollments = await storage.getCourseEnrollmentsByUser(userId);
       res.json(enrollments);
     } catch (error) {
@@ -315,9 +304,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/courses/:courseId/enroll', async (req: any, res) => {
+  app.post('/api/courses/:courseId/enroll', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const courseId = parseInt(req.params.courseId);
       
       // Check if already enrolled
@@ -339,9 +328,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress tracking
-  app.post('/api/lessons/:lessonId/progress', async (req: any, res) => {
+  app.post('/api/lessons/:lessonId/progress', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const lessonId = parseInt(req.params.lessonId);
       
       const progress = await storage.createOrUpdateLessonProgress({
@@ -359,9 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/my-progress', async (req: any, res) => {
+  app.get('/api/my-progress', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const progress = await storage.getLessonProgressByUser(userId);
       res.json(progress);
     } catch (error) {
@@ -371,9 +360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reflection responses
-  app.post('/api/reflection-responses', async (req: any, res) => {
+  app.post('/api/reflection-responses', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const responseData = insertReflectionResponseSchema.parse({
         ...req.body,
         userId,
@@ -388,9 +377,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz lock routes - to implement site locking during quizzes
-  app.get('/api/quiz-lock-status', async (req: any, res) => {
+  app.get('/api/quiz-lock-status', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const activeLock = await storage.getActiveQuizLock(userId);
       res.json({ isLocked: !!activeLock, activeLock });
     } catch (error) {
@@ -399,9 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/quiz-locks', async (req: any, res) => {
+  app.post('/api/quiz-locks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const { quizId, timeLimit = 30 } = req.body; // Default 30 minutes
 
       // Check if user already has an active lock
@@ -424,9 +413,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/quiz-locks', async (req: any, res) => {
+  app.delete('/api/quiz-locks', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       await storage.clearQuizLock(userId);
       res.status(200).json({ message: "Quiz lock cleared" });
     } catch (error) {
@@ -435,9 +424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reflection-responses/:lessonId', async (req: any, res) => {
+  app.get('/api/reflection-responses/:lessonId', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const lessonId = parseInt(req.params.lessonId);
       
       const responses = await storage.getReflectionResponses(userId, lessonId);
@@ -449,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get quiz for a lesson
-  app.get('/api/lessons/:id/quiz', async (req: any, res) => {
+  app.get('/api/lessons/:id/quiz', isAuthenticated, async (req: any, res) => {
     try {
       const lessonId = parseInt(req.params.id);
       const quiz = await storage.getQuizByLessonId(lessonId);
@@ -461,9 +450,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz attempts
-  app.post('/api/quizzes/:quizId/attempts', async (req: any, res) => {
+  app.post('/api/quizzes/:quizId/attempts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const quizId = parseInt(req.params.quizId);
       
       // Get the quiz to find its lesson
@@ -503,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/quiz-attempts/:id', async (req: any, res) => {
+  app.put('/api/quiz-attempts/:id', isAuthenticated, async (req: any, res) => {
     try {
       const attemptId = parseInt(req.params.id);
       const attempt = await storage.updateQuizAttempt(attemptId, req.body);
@@ -519,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/quiz-responses', async (req, res) => {
+  app.post('/api/quiz-responses', isAuthenticated, async (req, res) => {
     try {
       const responseData = insertQuizResponseSchema.parse(req.body);
       const response = await storage.createQuizResponse(responseData);
@@ -531,9 +520,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Teacher dashboard stats
-  app.get('/api/courses/:courseId/stats', async (req: any, res) => {
+  app.get('/api/courses/:courseId/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -549,9 +538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/courses/:courseId/student-activity', async (req: any, res) => {
+  app.get('/api/courses/:courseId/student-activity', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = mockUserId;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
