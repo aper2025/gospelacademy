@@ -71,36 +71,7 @@ export default function Unit() {
     2: {
       title: "Unit 2: Life of Christ",
       description: "Study the life, ministry, and teachings of Jesus Christ",
-      lessons: [
-        {
-          id: 5,
-          title: "Lesson 1: The Silent Years - Introduction and Persian Period",
-          description: "Explore the historical context and Persian influence during the intertestamental period",
-          duration: 45,
-          quizId: 6
-        },
-        {
-          id: 6,
-          title: "Lesson 2: The Greek Conquest and Hellenization",
-          description: "Learn about Alexander's conquest and the spread of Greek culture",
-          duration: 45,
-          quizId: 7
-        },
-        {
-          id: 7,
-          title: "Lesson 3: The Maccabean Revolt and Jewish Independence",
-          description: "Study the Jewish resistance and the Maccabean dynasty",
-          duration: 45,
-          quizId: 8
-        },
-        {
-          id: 8,
-          title: "Lesson 4: Roman Rule and God's Sovereign Preparation",
-          description: "Understand how God used Roman rule to prepare the world for Christ",
-          duration: 45,
-          quizId: 9
-        }
-      ]
+      lessons: []
     }
   };
 
