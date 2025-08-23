@@ -37,12 +37,12 @@ export default function Unit() {
     enabled: isAuthenticated && unitId > 0,
   });
 
-  const { data: lessons } = useQuery<any[]>({
+  const { data: lessons, isLoading: lessonsLoading } = useQuery<any[]>({
     queryKey: ["/api/units", unitId.toString(), "lessons"],
     enabled: isAuthenticated && unitId > 0,
   });
 
-  if (isLoading) {
+  if (isLoading || lessonsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div>Loading unit...</div>
@@ -54,37 +54,7 @@ export default function Unit() {
     return null;
   }
 
-  const unitData = {
-    1: {
-      title: "Unit 1: Setting the Stage for the King",
-      description: "Explore the historical and cultural context leading up to Christ's birth",
-      lessons: [
-        {
-          id: 1,
-          title: "Chapter 1: The Intertestamental Period - 400 Years of Silence",
-          description: "Learn about the 400 years between the Old and New Testament and how God prepared the world for Christ's coming",
-          duration: 60,
-          quizId: 5
-        },
-        {
-          id: 9,
-          title: "Chapter 2: The World into Which Jesus Was Born - First Century Palestine",
-          description: "Understand the political, religious, and social context of first-century Palestine that shaped Jesus' earthly ministry",
-          duration: 65,
-          quizId: 10
-        }
-      ]
-    },
-    2: {
-      title: "Unit 2: Life of Christ",
-      description: "Study the life, ministry, and teachings of Jesus Christ",
-      lessons: []
-    }
-  };
-
-  const currentUnit = unitData[unitId as keyof typeof unitData];
-
-  if (!currentUnit) {
+  if (!unit) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div>Unit not found</div>
@@ -112,8 +82,8 @@ export default function Unit() {
                 <div className="absolute inset-0 bg-black bg-opacity-20" />
                 <div className="relative h-full flex items-center px-8">
                   <div className="text-white">
-                    <h1 className="text-2xl font-bold mb-2">{currentUnit.title}</h1>
-                    <p className="text-blue-100">{currentUnit.description}</p>
+                    <h1 className="text-2xl font-bold mb-2">{unit.title}</h1>
+                    <p className="text-blue-100">{unit.description}</p>
                   </div>
                 </div>
               </div>
@@ -123,7 +93,7 @@ export default function Unit() {
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Lessons</h2>
               
-              {currentUnit.lessons.map((lesson, index) => (
+              {lessons?.map((lesson: any, index: number) => (
                 <Card key={lesson.id} className="card-shadow hover:shadow-card-hover transition-all duration-300">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
@@ -132,12 +102,12 @@ export default function Unit() {
                           {lesson.title}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">
-                          {lesson.description}
+                          {lesson.description || `Study the content and teachings from ${lesson.title}`}
                         </p>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
-                            {lesson.duration} minutes
+                            60 minutes
                           </div>
                         </div>
                       </div>
@@ -149,7 +119,7 @@ export default function Unit() {
                           </Link>
                         </Button>
                         <Button variant="outline" asChild>
-                          <Link href={`/quiz/${lesson.quizId}`}>
+                          <Link href={`/lessons/${lesson.id}/quiz`}>
                             <FileText className="h-4 w-4 mr-2" />
                             Take Quiz
                           </Link>
@@ -172,7 +142,7 @@ export default function Unit() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/lessons/${currentUnit.lessons[0]?.id}`}>
+                    <Link href={`/lessons/${lessons?.[0]?.id}`}>
                       <div className="text-center">
                         <Video className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Watch Video</div>
@@ -182,21 +152,21 @@ export default function Unit() {
                   </Button>
                   
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/lessons/${currentUnit.lessons[0]?.id}`}>
+                    <Link href={`/lessons/${lessons?.[0]?.id}`}>
                       <div className="text-center">
                         <FileText className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Reflection Questions</div>
-                        <div className="text-sm text-muted-foreground">8 questions</div>
+                        <div className="text-sm text-muted-foreground">5 questions</div>
                       </div>
                     </Link>
                   </Button>
                   
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/quiz/${currentUnit.lessons[0]?.quizId}`}>
+                    <Link href={`/lessons/${lessons?.[0]?.id}/quiz`}>
                       <div className="text-center">
                         <Award className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Unit Assessment</div>
-                        <div className="text-sm text-muted-foreground">Chapter 1 Quiz</div>
+                        <div className="text-sm text-muted-foreground">Chapter Quiz</div>
                       </div>
                     </Link>
                   </Button>
