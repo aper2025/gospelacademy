@@ -91,6 +91,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single unit
+  app.get('/api/units/:id', isAuthenticated, async (req, res) => {
+    try {
+      const unitId = parseInt(req.params.id);
+      const unit = await storage.getUnit(unitId);
+      if (!unit) {
+        return res.status(404).json({ message: "Unit not found" });
+      }
+      res.json(unit);
+    } catch (error) {
+      console.error("Error fetching unit:", error);
+      res.status(500).json({ message: "Failed to fetch unit" });
+    }
+  });
+
   app.post('/api/units', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
