@@ -63,7 +63,42 @@ export default function Unit() {
           id: 1,
           title: "Chapter 1: The Intertestamental Period - 400 Years of Silence",
           description: "Learn about the 400 years between the Old and New Testament and how God prepared the world for Christ's coming",
-          duration: 60
+          duration: 60,
+          quizId: 5
+        }
+      ]
+    },
+    2: {
+      title: "Unit 2: Life of Christ",
+      description: "Study the life, ministry, and teachings of Jesus Christ",
+      lessons: [
+        {
+          id: 5,
+          title: "Lesson 1: The Silent Years - Introduction and Persian Period",
+          description: "Explore the historical context and Persian influence during the intertestamental period",
+          duration: 45,
+          quizId: 6
+        },
+        {
+          id: 6,
+          title: "Lesson 2: The Greek Conquest and Hellenization",
+          description: "Learn about Alexander's conquest and the spread of Greek culture",
+          duration: 45,
+          quizId: 7
+        },
+        {
+          id: 7,
+          title: "Lesson 3: The Maccabean Revolt and Jewish Independence",
+          description: "Study the Jewish resistance and the Maccabean dynasty",
+          duration: 45,
+          quizId: 8
+        },
+        {
+          id: 8,
+          title: "Lesson 4: Roman Rule and God's Sovereign Preparation",
+          description: "Understand how God used Roman rule to prepare the world for Christ",
+          duration: 45,
+          quizId: 9
         }
       ]
     }
@@ -130,13 +165,13 @@ export default function Unit() {
                       </div>
                       <div className="ml-6 flex flex-col space-y-2">
                         <Button asChild>
-                          <Link href={`/lesson/${lesson.id}`}>
+                          <Link href={`/lessons/${lesson.id}`}>
                             <BookOpen className="h-4 w-4 mr-2" />
                             Start Lesson
                           </Link>
                         </Button>
                         <Button variant="outline" asChild>
-                          <Link href={`/quiz/5`}>
+                          <Link href={`/quiz/${lesson.quizId}`}>
                             <FileText className="h-4 w-4 mr-2" />
                             Take Quiz
                           </Link>
@@ -159,17 +194,17 @@ export default function Unit() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/lesson/1`}>
+                    <Link href={`/lessons/${currentUnit.lessons[0]?.id}`}>
                       <div className="text-center">
                         <Video className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Watch Video</div>
-                        <div className="text-sm text-muted-foreground">Chapter 1 Overview</div>
+                        <div className="text-sm text-muted-foreground">Unit Overview</div>
                       </div>
                     </Link>
                   </Button>
                   
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/lesson/1`}>
+                    <Link href={`/lessons/${currentUnit.lessons[0]?.id}`}>
                       <div className="text-center">
                         <FileText className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Reflection Questions</div>
@@ -179,7 +214,7 @@ export default function Unit() {
                   </Button>
                   
                   <Button variant="outline" className="flex items-center justify-center p-4 h-auto" asChild>
-                    <Link href={`/quiz/5`}>
+                    <Link href={`/quiz/${currentUnit.lessons[0]?.quizId}`}>
                       <div className="text-center">
                         <Award className="h-6 w-6 mx-auto mb-2" />
                         <div className="font-medium">Unit Assessment</div>
