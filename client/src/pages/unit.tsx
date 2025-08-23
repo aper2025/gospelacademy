@@ -65,6 +65,13 @@ export default function Unit() {
           description: "Learn about the 400 years between the Old and New Testament and how God prepared the world for Christ's coming",
           duration: 60,
           quizId: 5
+        },
+        {
+          id: 9,
+          title: "Chapter 2: The World into Which Jesus Was Born - First Century Palestine",
+          description: "Understand the political, religious, and social context of first-century Palestine that shaped Jesus' earthly ministry",
+          duration: 65,
+          quizId: 10
         }
       ]
     },
