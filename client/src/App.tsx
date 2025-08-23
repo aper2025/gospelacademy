@@ -12,6 +12,7 @@ import Unit from "@/pages/unit";
 import Lesson from "@/pages/lesson";
 import Quiz from "@/pages/quiz";
 import TeacherDashboard from "@/pages/teacher-dashboard";
+import Textbook from "@/pages/textbook";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
           <Route path="/lessons/:id" component={Lesson} />
           <Route path="/quiz/:id" component={Quiz} />
           <Route path="/teacher" component={TeacherDashboard} />
+          <Route path="/textbook" component={Textbook} />
         </>
       )}
       <Route component={NotFound} />

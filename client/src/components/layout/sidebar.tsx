@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link, useLocation } from "wouter";
-import { BookOpen, BarChart3, FileText } from "lucide-react";
+import { BookOpen, BarChart3, FileText, Library } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Sidebar() {
@@ -12,6 +12,12 @@ export default function Sidebar() {
       href: "/",
       icon: BarChart3,
       current: location === "/",
+    },
+    {
+      name: "Course Textbook",
+      href: "/textbook",
+      icon: Library,
+      current: location === "/textbook",
     },
     {
       name: "Unit 1: Setting the Stage for the King",

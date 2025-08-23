@@ -8,7 +8,7 @@ import Sidebar from "@/components/layout/sidebar";
 import ProgressWidget from "@/components/progress-widget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Award } from "lucide-react";
+import { BookOpen, Clock, Award, FileText } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Dashboard() {
@@ -102,7 +102,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="card-shadow hover:shadow-card-hover transition-all duration-300 cursor-pointer">
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                   <BookOpen className="h-6 w-6 text-primary mr-3" />
@@ -164,6 +164,23 @@ export default function Dashboard() {
                   </CardDescription>
                   <Button variant="outline" className="w-full">
                     View Progress
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="card-shadow hover:shadow-card-hover transition-all duration-300 cursor-pointer">
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <FileText className="h-6 w-6 text-orange-500 mr-3" />
+                  <CardTitle className="text-lg">Course Textbook</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="mb-4">
+                    Read the full textbook: "The Life of Christ & The Early Church"
+                  </CardDescription>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/textbook">
+                      Open Textbook
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
