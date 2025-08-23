@@ -1,21 +1,11 @@
-import { useState } from "react";
 import Header from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Download, BookOpen, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, Download, BookOpen, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Textbook() {
-  const [zoom, setZoom] = useState(100);
   const textbookUrl = '/attached_assets/The Life of Christ & The Early Church - semister 1 Textbook_1755979902566.pdf';
-
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 25, 200));
-  };
-
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 25, 50));
-  };
 
   const handleDownload = () => {
     const link = document.createElement('a');
@@ -24,6 +14,10 @@ export default function Textbook() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(textbookUrl, '_blank');
   };
 
   return (
@@ -49,22 +43,19 @@ export default function Textbook() {
             
             {/* Controls */}
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoom <= 50}>
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground px-2">{zoom}%</span>
-              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoom >= 200}>
-                <ZoomIn className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={handleOpenInNewTab}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in New Tab
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-2" />
-                Download
+                Download PDF
               </Button>
             </div>
           </div>
         </div>
 
-        {/* PDF Viewer */}
+        {/* PDF Access */}
         <Card className="card-shadow">
           <CardHeader className="pb-4">
             <div className="flex items-center space-x-3">
@@ -72,24 +63,37 @@ export default function Textbook() {
               <CardTitle>New Testament Survey Textbook</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="w-full" style={{ height: 'calc(100vh - 250px)' }}>
-              <iframe
-                src={`${textbookUrl}#zoom=${zoom}`}
-                className="w-full h-full border-0 rounded-b-lg"
-                title="Course Textbook"
-                data-testid="textbook-viewer"
-              >
-                <div className="p-8 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    Your browser doesn't support PDF viewing. 
-                  </p>
-                  <Button onClick={handleDownload}>
+          <CardContent className="p-8">
+            <div className="text-center space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold">The Life of Christ & The Early Church</h3>
+                <p className="text-muted-foreground">Semester 1 Textbook - Complete Course Material</p>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                  <BookOpen className="h-8 w-8 text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">Textbook Ready</span>
+                </div>
+                <p className="text-blue-700 dark:text-blue-300 text-sm mb-6">
+                  Access your complete course textbook with all chapters, including the Intertestamental Period, 
+                  Political & Religious World of the New Testament, and more.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button onClick={handleOpenInNewTab} className="px-6 py-2" data-testid="button-open-textbook">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Textbook
+                  </Button>
+                  <Button variant="outline" onClick={handleDownload} className="px-6 py-2">
                     <Download className="h-4 w-4 mr-2" />
                     Download PDF
                   </Button>
                 </div>
-              </iframe>
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                <p>💡 <strong>Tip:</strong> The textbook will open in a new tab where you can use your browser's built-in PDF viewer with zoom, search, and navigation controls.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
