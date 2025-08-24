@@ -786,7 +786,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.completedAt = new Date();
       }
       
-      console.log("Updating quiz attempt with filtered data:", updateData);
       
       const attempt = await storage.updateQuizAttempt(attemptId, updateData);
       

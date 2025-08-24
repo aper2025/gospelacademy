@@ -117,7 +117,6 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
 
   const submitQuizMutation = useMutation({
     mutationFn: async () => {
-      console.log("Starting quiz submission, quizAttemptId:", quizAttemptId);
       if (!quizAttemptId) throw new Error("No quiz attempt found");
       
       // Submit all responses
@@ -128,40 +127,24 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
         isCorrect: answers[index] === question.correctAnswer,
       }));
 
-      console.log("Submitting responses:", responses);
-
       // Save responses
-      try {
-        await Promise.all(
-          responses.map(response => 
-            apiRequest("POST", "/api/quiz-responses", response)
-          )
-        );
-        console.log("All responses saved successfully");
-      } catch (error) {
-        console.error("Error saving responses:", error);
-        throw new Error(`Failed to save responses: ${error.message}`);
-      }
+      await Promise.all(
+        responses.map(response => 
+          apiRequest("POST", "/api/quiz-responses", response)
+        )
+      );
 
       // Calculate score
       const correctAnswers = responses.filter(r => r.isCorrect).length;
       const score = Math.round((correctAnswers / questions.length) * 100);
       const isPassed = score >= (quiz.passingScore || 70);
 
-      console.log("Calculated score:", score, "isPassed:", isPassed);
-
-      // Update attempt with final score (skip problematic date field for now)
-      try {
-        await apiRequest("PUT", `/api/quiz-attempts/${quizAttemptId}`, {
-          score,
-          isPassed,
-          timeSpent: Math.round(((quiz.timeLimit || 15) * 60 - timeRemaining) / 60),
-        });
-        console.log("Quiz attempt updated successfully");
-      } catch (error) {
-        console.error("Error updating quiz attempt:", error);
-        throw new Error(`Failed to update quiz attempt: ${error.message}`);
-      }
+      // Update attempt with final score
+      await apiRequest("PUT", `/api/quiz-attempts/${quizAttemptId}`, {
+        score,
+        isPassed,
+        timeSpent: Math.round(((quiz.timeLimit || 15) * 60 - timeRemaining) / 60),
+      });
 
       return { score, isPassed, correctAnswers, totalQuestions: questions.length };
     },
