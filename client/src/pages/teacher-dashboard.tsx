@@ -5,13 +5,17 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { 
@@ -1058,22 +1062,7 @@ export default function TeacherDashboard() {
                 Modify lesson content for {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Lesson editing interface will be implemented here. This will allow you to modify:
-              </p>
-              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <li>Lesson titles and content</li>
-                <li>Learning objectives</li>
-                <li>Video URLs and resources</li>
-                <li>Lesson order and duration</li>
-              </ul>
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={() => setEditLessonsDialogOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
+            <LessonEditor classId={selectedClassId} onClose={() => setEditLessonsDialogOpen(false)} />
           </DialogContent>
         </Dialog>
 
@@ -1086,22 +1075,7 @@ export default function TeacherDashboard() {
                 Modify quiz questions and settings for {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Quiz editing interface will be implemented here. This will allow you to modify:
-              </p>
-              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <li>Quiz questions and answer choices</li>
-                <li>Correct answers and explanations</li>
-                <li>Time limits and passing scores</li>
-                <li>Question order and types</li>
-              </ul>
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={() => setEditQuizzesDialogOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
+            <QuizEditor classId={selectedClassId} onClose={() => setEditQuizzesDialogOpen(false)} />
           </DialogContent>
         </Dialog>
 
@@ -1114,25 +1088,615 @@ export default function TeacherDashboard() {
                 Modify reflection questions for {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Reflection question editing interface will be implemented here. This will allow you to modify:
-              </p>
-              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <li>Question text and prompts</li>
-                <li>Question categories and topics</li>
-                <li>Order and grouping</li>
-                <li>Associated lessons and units</li>
-              </ul>
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={() => setEditReflectionsDialogOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
+            <ReflectionEditor classId={selectedClassId} onClose={() => setEditReflectionsDialogOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
     </div>
+  );
+}
+
+// Lesson Editor Component
+function LessonEditor({ classId, onClose }: { classId: number | null; onClose: () => void }) {
+  const { data: lessons, isLoading } = useQuery({
+    queryKey: ["/api/lessons", classId],
+    enabled: !!classId,
+  });
+
+  const queryClient = useQueryClient();
+  
+  const updateLessonMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/teacher/lessons/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lessons", classId] });
+    },
+  });
+
+  if (!classId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Please select a class to edit lessons.</p>
+        <Button onClick={onClose} className="mt-4">Close</Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading lessons...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {lessons?.map((lesson: any) => (
+          <LessonEditForm 
+            key={lesson.id} 
+            lesson={lesson} 
+            onUpdate={(data) => updateLessonMutation.mutate({ id: lesson.id, data })}
+            isUpdating={updateLessonMutation.isPending}
+          />
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </div>
+  );
+}
+
+// Lesson Edit Form
+function LessonEditForm({ lesson, onUpdate, isUpdating }: { lesson: any; onUpdate: (data: any) => void; isUpdating: boolean }) {
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const lessonSchema = z.object({
+    title: z.string().min(1, "Title is required"),
+    content: z.string().min(1, "Content is required"),
+    learningObjectives: z.string(),
+    keyTerms: z.string(),
+    videoUrl: z.string().optional(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(lessonSchema),
+    defaultValues: {
+      title: lesson.title || "",
+      content: lesson.content || "",
+      learningObjectives: lesson.learningObjectives || "",
+      keyTerms: lesson.keyTerms || "",
+      videoUrl: lesson.videoUrl || "",
+    },
+  });
+
+  const handleSubmit = (data: any) => {
+    onUpdate(data);
+    setIsEditing(false);
+  };
+
+  if (!isEditing) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{lesson.title}</CardTitle>
+          <Button size="sm" onClick={() => setIsEditing(true)}>
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+            {lesson.content}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Edit Lesson</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="content"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Content</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={6} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="learningObjectives"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Learning Objectives</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="keyTerms"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Key Terms</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={2} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="videoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Video URL (Optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="https://youtube.com/..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Quiz Editor Component
+function QuizEditor({ classId, onClose }: { classId: number | null; onClose: () => void }) {
+  const { data: quizzes, isLoading } = useQuery({
+    queryKey: ["/api/quizzes", classId],
+    enabled: !!classId,
+  });
+
+  if (!classId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Please select a class to edit quizzes.</p>
+        <Button onClick={onClose} className="mt-4">Close</Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading quizzes...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {quizzes?.map((quiz: any) => (
+          <QuizEditForm key={quiz.id} quiz={quiz} classId={classId} />
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </div>
+  );
+}
+
+// Quiz Edit Form
+function QuizEditForm({ quiz, classId }: { quiz: any; classId: number }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
+  
+  const { data: questions } = useQuery({
+    queryKey: ["/api/quiz-questions", quiz.id],
+    enabled: isEditing,
+  });
+
+  const updateQuizMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('PUT', `/api/teacher/quizzes/${quiz.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes", classId] });
+    },
+  });
+
+  const updateQuestionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/teacher/quiz-questions/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quiz-questions", quiz.id] });
+    },
+  });
+
+  if (!isEditing) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{quiz.title}</CardTitle>
+          <Button size="sm" onClick={() => setIsEditing(true)}>
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Questions: {quiz.questionCount || "Loading..."}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Edit Quiz: {quiz.title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {questions?.map((question: any) => (
+            <QuestionEditForm 
+              key={question.id} 
+              question={question} 
+              onUpdate={(data) => updateQuestionMutation.mutate({ id: question.id, data })}
+              isUpdating={updateQuestionMutation.isPending}
+            />
+          ))}
+          <div className="flex gap-2">
+            <Button onClick={() => setIsEditing(false)}>
+              Done Editing
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Question Edit Form
+function QuestionEditForm({ question, onUpdate, isUpdating }: { question: any; onUpdate: (data: any) => void; isUpdating: boolean }) {
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const questionSchema = z.object({
+    questionText: z.string().min(1, "Question text is required"),
+    option1: z.string().min(1, "Option 1 is required"),
+    option2: z.string().min(1, "Option 2 is required"),
+    option3: z.string().min(1, "Option 3 is required"),
+    option4: z.string().min(1, "Option 4 is required"),
+    correctAnswer: z.string().min(1, "Correct answer is required"),
+    explanation: z.string(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(questionSchema),
+    defaultValues: {
+      questionText: question.questionText || "",
+      option1: question.option1 || "",
+      option2: question.option2 || "",
+      option3: question.option3 || "",
+      option4: question.option4 || "",
+      correctAnswer: question.correctAnswer || "",
+      explanation: question.explanation || "",
+    },
+  });
+
+  const handleSubmit = (data: any) => {
+    onUpdate(data);
+    setIsEditing(false);
+  };
+
+  if (!isEditing) {
+    return (
+      <div className="border rounded p-4 space-y-2">
+        <div className="flex justify-between items-start">
+          <p className="font-medium">{question.questionText}</p>
+          <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Correct: {question.correctAnswer}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded p-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
+          <FormField
+            control={form.control}
+            name="questionText"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Question</FormLabel>
+                <FormControl>
+                  <Textarea {...field} rows={2} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name="option1"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Option A</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="option2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Option B</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="option3"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Option C</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="option4"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Option D</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormField
+            control={form.control}
+            name="correctAnswer"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Correct Answer</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A</SelectItem>
+                      <SelectItem value="B">B</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                      <SelectItem value="D">D</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="explanation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Explanation</FormLabel>
+                <FormControl>
+                  <Textarea {...field} rows={2} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save"}
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+// Reflection Editor Component
+function ReflectionEditor({ classId, onClose }: { classId: number | null; onClose: () => void }) {
+  const { data: reflectionQuestions, isLoading } = useQuery({
+    queryKey: ["/api/reflection-questions", classId],
+    enabled: !!classId,
+  });
+
+  const queryClient = useQueryClient();
+  
+  const updateReflectionMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await apiRequest('PUT', `/api/teacher/reflection-questions/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reflection-questions", classId] });
+    },
+  });
+
+  if (!classId) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">Please select a class to edit reflection questions.</p>
+        <Button onClick={onClose} className="mt-4">Close</Button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading reflection questions...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="max-h-96 overflow-y-auto space-y-4">
+        {reflectionQuestions?.map((question: any) => (
+          <ReflectionEditForm 
+            key={question.id} 
+            question={question} 
+            onUpdate={(data) => updateReflectionMutation.mutate({ id: question.id, data })}
+            isUpdating={updateReflectionMutation.isPending}
+          />
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button onClick={onClose}>Close</Button>
+      </div>
+    </div>
+  );
+}
+
+// Reflection Edit Form
+function ReflectionEditForm({ question, onUpdate, isUpdating }: { question: any; onUpdate: (data: any) => void; isUpdating: boolean }) {
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const reflectionSchema = z.object({
+    questionText: z.string().min(1, "Question text is required"),
+    promptText: z.string(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(reflectionSchema),
+    defaultValues: {
+      questionText: question.questionText || "",
+      promptText: question.promptText || "",
+    },
+  });
+
+  const handleSubmit = (data: any) => {
+    onUpdate(data);
+    setIsEditing(false);
+  };
+
+  if (!isEditing) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{question.questionText}</CardTitle>
+          <Button size="sm" onClick={() => setIsEditing(true)}>
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+            {question.promptText}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Edit Reflection Question</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="questionText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Question</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="promptText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Prompt/Instructions</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={2} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex gap-2">
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }

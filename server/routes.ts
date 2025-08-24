@@ -1299,6 +1299,213 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get lessons for content editing (class-specific)
+  app.get('/api/lessons', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access lesson editing" });
+      }
+
+      const classId = req.query.classId;
+      if (!classId) {
+        return res.status(400).json({ message: "Class ID is required" });
+      }
+
+      // Get lessons for the course assigned to this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, parseInt(classId)),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      if (!teacherClass[0].courseId) {
+        return res.json([]);
+      }
+
+      const lessons = await db
+        .select()
+        .from(lessonsTable)
+        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
+        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
+        .orderBy(unitsTable.order, lessonsTable.order);
+
+      res.json(lessons.map(result => result.lessons));
+    } catch (error) {
+      console.error("Error fetching lessons for editing:", error);
+      res.status(500).json({ message: "Failed to fetch lessons" });
+    }
+  });
+
+  // Get quizzes for content editing (class-specific)
+  app.get('/api/quizzes', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access quiz editing" });
+      }
+
+      const classId = req.query.classId;
+      if (!classId) {
+        return res.status(400).json({ message: "Class ID is required" });
+      }
+
+      // Get quizzes for the course assigned to this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, parseInt(classId)),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      if (!teacherClass[0].courseId) {
+        return res.json([]);
+      }
+
+      const quizzes = await db
+        .select()
+        .from(quizzesTable)
+        .leftJoin(lessonsTable, eq(quizzesTable.lessonId, lessonsTable.id))
+        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
+        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
+        .orderBy(unitsTable.order, lessonsTable.order);
+
+      res.json(quizzes.map(result => result.quizzes));
+    } catch (error) {
+      console.error("Error fetching quizzes for editing:", error);
+      res.status(500).json({ message: "Failed to fetch quizzes" });
+    }
+  });
+
+  // Get quiz questions for editing
+  app.get('/api/quiz-questions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access quiz questions" });
+      }
+
+      const quizId = req.query.quiz_id || req.query.quizId;
+      if (!quizId) {
+        return res.status(400).json({ message: "Quiz ID is required" });
+      }
+
+      const questions = await db
+        .select()
+        .from(quizQuestionsTable)
+        .where(eq(quizQuestionsTable.quizId, parseInt(quizId)))
+        .orderBy(quizQuestionsTable.order);
+
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching quiz questions:", error);
+      res.status(500).json({ message: "Failed to fetch quiz questions" });
+    }
+  });
+
+  // Get reflection questions for content editing (class-specific)
+  app.get('/api/reflection-questions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access reflection questions" });
+      }
+
+      const classId = req.query.classId;
+      if (!classId) {
+        return res.status(400).json({ message: "Class ID is required" });
+      }
+
+      // Get reflection questions for the course assigned to this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, parseInt(classId)),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      if (!teacherClass[0].courseId) {
+        return res.json([]);
+      }
+
+      const reflectionQuestions = await db
+        .select()
+        .from(reflectionQuestionsTable)
+        .leftJoin(lessonsTable, eq(reflectionQuestionsTable.lessonId, lessonsTable.id))
+        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
+        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
+        .orderBy(unitsTable.order, lessonsTable.order);
+
+      res.json(reflectionQuestions.map(result => result.reflection_questions));
+    } catch (error) {
+      console.error("Error fetching reflection questions for editing:", error);
+      res.status(500).json({ message: "Failed to fetch reflection questions" });
+    }
+  });
+
+  // Update lesson content
+  app.put('/api/teacher/lessons/:lessonId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can edit lessons" });
+      }
+
+      const lessonId = parseInt(req.params.lessonId);
+      
+      // Update lesson
+      const [updatedLesson] = await db
+        .update(lessonsTable)
+        .set({
+          title: req.body.title,
+          content: req.body.content,
+          learningObjectives: req.body.learningObjectives,
+          keyTerms: req.body.keyTerms,
+          videoUrl: req.body.videoUrl,
+        })
+        .where(eq(lessonsTable.id, lessonId))
+        .returning();
+
+      if (!updatedLesson) {
+        return res.status(404).json({ message: "Lesson not found" });
+      }
+
+      res.json(updatedLesson);
+    } catch (error) {
+      console.error("Error updating lesson:", error);
+      res.status(500).json({ message: "Failed to update lesson" });
+    }
+  });
+
   // Content Editing Routes for Teachers
   app.put('/api/teacher/quizzes/:quizId', requireAuth, async (req: any, res) => {
     try {
@@ -1333,13 +1540,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const questionId = parseInt(req.params.questionId);
-      const question = await storage.updateQuizQuestionAsTeacher(questionId, req.body);
       
-      if (!question) {
+      // Update quiz question
+      const [updatedQuestion] = await db
+        .update(quizQuestionsTable)
+        .set({
+          questionText: req.body.questionText,
+          option1: req.body.option1,
+          option2: req.body.option2,
+          option3: req.body.option3,
+          option4: req.body.option4,
+          correctAnswer: req.body.correctAnswer,
+          explanation: req.body.explanation,
+        })
+        .where(eq(quizQuestionsTable.id, questionId))
+        .returning();
+
+      if (!updatedQuestion) {
         return res.status(404).json({ message: "Quiz question not found" });
       }
 
-      res.json(question);
+      res.json(updatedQuestion);
     } catch (error) {
       console.error("Error updating quiz question:", error);
       res.status(500).json({ message: "Failed to update quiz question" });
@@ -1356,13 +1577,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const questionId = parseInt(req.params.questionId);
-      const question = await storage.updateReflectionQuestionAsTeacher(questionId, req.body);
       
-      if (!question) {
+      // Update reflection question
+      const [updatedQuestion] = await db
+        .update(reflectionQuestionsTable)
+        .set({
+          questionText: req.body.questionText,
+          promptText: req.body.promptText,
+        })
+        .where(eq(reflectionQuestionsTable.id, questionId))
+        .returning();
+
+      if (!updatedQuestion) {
         return res.status(404).json({ message: "Reflection question not found" });
       }
 
-      res.json(question);
+      res.json(updatedQuestion);
     } catch (error) {
       console.error("Error updating reflection question:", error);
       res.status(500).json({ message: "Failed to update reflection question" });
