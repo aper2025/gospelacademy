@@ -771,8 +771,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attemptId = parseInt(req.params.id);
       
-      // Only allow updating specific fields
-      const allowedFields = ['score', 'timeSpent', 'isPassed', 'completedAt'];
+      // Only allow updating specific fields (excluding completedAt for now)
+      const allowedFields = ['score', 'timeSpent', 'isPassed'];
       const updateData: any = {};
       
       for (const field of allowedFields) {
@@ -781,15 +781,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Convert completedAt string to Date object if present
-      if (updateData.completedAt) {
-        if (typeof updateData.completedAt === 'string') {
-          updateData.completedAt = new Date(updateData.completedAt);
-        }
-        // Validate that it's a valid Date object
-        if (!(updateData.completedAt instanceof Date) || isNaN(updateData.completedAt.getTime())) {
-          delete updateData.completedAt; // Remove invalid date
-        }
+      // If this is a completion (has score), add completedAt timestamp
+      if (updateData.score !== undefined) {
+        updateData.completedAt = new Date();
       }
       
       console.log("Updating quiz attempt with filtered data:", updateData);
