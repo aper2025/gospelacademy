@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuizLock } from "@/contexts/QuizLockContext";
 import { ArrowLeft, ArrowRight, Save, Clock, CheckCircle } from "lucide-react";
 import type { Quiz, QuizQuestion } from "@shared/schema";
 
@@ -19,6 +20,7 @@ interface QuizInterfaceProps {
 
 export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
   const { toast } = useToast();
+  const { clearLock } = useQuizLock();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeRemaining, setTimeRemaining] = useState((quiz.timeLimit || 15) * 60); // Convert to seconds
@@ -148,8 +150,16 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
 
       return { score, isPassed, correctAnswers, totalQuestions: questions.length };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       setIsSubmitted(true);
+      
+      // Clear the quiz lock since quiz is completed
+      try {
+        await clearLock();
+      } catch (error) {
+        console.error("Error clearing quiz lock:", error);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/my-progress"] });
       toast({
         title: result.isPassed ? "Quiz Passed!" : "Quiz Completed",
