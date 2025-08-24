@@ -48,7 +48,7 @@ export function ClassAnnouncementsList({ classId, isTeacher = false }: ClassAnno
 
   const deleteAnnouncementMutation = useMutation({
     mutationFn: async (announcementId: number) => {
-      return apiRequest(`/api/announcements/${announcementId}`, 'DELETE');
+      return apiRequest('DELETE', `/api/announcements/${announcementId}`);
     },
     onSuccess: () => {
       toast({

@@ -29,7 +29,7 @@ export function ClassChatForm({ classId, onSuccess }: ClassChatFormProps) {
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest(`/api/classes/${classId}/announcements`, 'POST', data);
+      return apiRequest('POST', `/api/classes/${classId}/announcements`, data);
     },
     onSuccess: () => {
       toast({
