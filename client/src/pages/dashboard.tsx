@@ -235,6 +235,38 @@ export default function Dashboard() {
               </Card>
             )}
 
+            {/* Class Messages Section */}
+            <Card className="card-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Recent Messages
+                </CardTitle>
+                <CardDescription>
+                  Latest announcements and updates from your teachers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {enrollments && enrollments.length > 0 ? (
+                  <div className="space-y-4">
+                    {enrollments.map((enrollment: any) => (
+                      <div key={enrollment.classId}>
+                        <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300 mb-2">
+                          {enrollment.className}
+                        </h4>
+                        <ClassAnnouncementsList classId={enrollment.classId} isTeacher={false} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No class messages available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Recent Activity */}
             <Card className="card-shadow">
               <CardHeader>

@@ -1390,10 +1390,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const lessons = await db
         .select()
-        .from(lessonsTable)
-        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
-        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
-        .orderBy(unitsTable.order, lessonsTable.order);
+        .from(lessons)
+        .leftJoin(units, eq(lessons.unitId, units.id))
+        .where(eq(units.courseId, teacherClass[0].courseId))
+        .orderBy(units.order, lessons.order);
 
       res.json(lessons.map(result => result.lessons));
     } catch (error) {
@@ -1437,11 +1437,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const quizzes = await db
         .select()
-        .from(quizzesTable)
-        .leftJoin(lessonsTable, eq(quizzesTable.lessonId, lessonsTable.id))
-        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
-        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
-        .orderBy(unitsTable.order, lessonsTable.order);
+        .from(quizzes)
+        .leftJoin(lessons, eq(quizzes.lessonId, lessons.id))
+        .leftJoin(units, eq(lessons.unitId, units.id))
+        .where(eq(units.courseId, teacherClass[0].courseId))
+        .orderBy(units.order, lessons.order);
 
       res.json(quizzes.map(result => result.quizzes));
     } catch (error) {
@@ -1467,9 +1467,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const questions = await db
         .select()
-        .from(quizQuestionsTable)
-        .where(eq(quizQuestionsTable.quizId, parseInt(quizId)))
-        .orderBy(quizQuestionsTable.order);
+        .from(quizQuestions)
+        .where(eq(quizQuestions.quizId, parseInt(quizId)))
+        .orderBy(quizQuestions.order);
 
       res.json(questions);
     } catch (error) {
@@ -1513,11 +1513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const reflectionQuestions = await db
         .select()
-        .from(reflectionQuestionsTable)
-        .leftJoin(lessonsTable, eq(reflectionQuestionsTable.lessonId, lessonsTable.id))
-        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
-        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
-        .orderBy(unitsTable.order, lessonsTable.order);
+        .from(reflectionQuestions)
+        .leftJoin(lessons, eq(reflectionQuestions.lessonId, lessons.id))
+        .leftJoin(units, eq(lessons.unitId, units.id))
+        .where(eq(units.courseId, teacherClass[0].courseId))
+        .orderBy(units.order, lessons.order);
 
       res.json(reflectionQuestions.map(result => result.reflection_questions));
     } catch (error) {
@@ -1540,7 +1540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update lesson
       const [updatedLesson] = await db
-        .update(lessonsTable)
+        .update(lessons)
         .set({
           title: req.body.title,
           content: req.body.content,
@@ -1548,7 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           keyTerms: req.body.keyTerms,
           videoUrl: req.body.videoUrl,
         })
-        .where(eq(lessonsTable.id, lessonId))
+        .where(eq(lessons.id, lessonId))
         .returning();
 
       if (!updatedLesson) {
@@ -1599,7 +1599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update quiz question
       const [updatedQuestion] = await db
-        .update(quizQuestionsTable)
+        .update(quizQuestions)
         .set({
           questionText: req.body.questionText,
           option1: req.body.option1,
@@ -1609,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           correctAnswer: req.body.correctAnswer,
           explanation: req.body.explanation,
         })
-        .where(eq(quizQuestionsTable.id, questionId))
+        .where(eq(quizQuestions.id, questionId))
         .returning();
 
       if (!updatedQuestion) {
@@ -1636,12 +1636,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update reflection question
       const [updatedQuestion] = await db
-        .update(reflectionQuestionsTable)
+        .update(reflectionQuestions)
         .set({
           questionText: req.body.questionText,
           promptText: req.body.promptText,
         })
-        .where(eq(reflectionQuestionsTable.id, questionId))
+        .where(eq(reflectionQuestions.id, questionId))
         .returning();
 
       if (!updatedQuestion) {
@@ -2093,6 +2093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete announcement" });
     }
   });
+
 
   const httpServer = createServer(app);
   return httpServer;
