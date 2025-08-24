@@ -771,11 +771,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attemptId = parseInt(req.params.id);
       
+      // Only allow updating specific fields
+      const allowedFields = ['score', 'timeSpent', 'isPassed', 'completedAt'];
+      const updateData: any = {};
+      
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
       // Convert completedAt string to Date object if present
-      const updateData = { ...req.body };
       if (updateData.completedAt && typeof updateData.completedAt === 'string') {
         updateData.completedAt = new Date(updateData.completedAt);
       }
+      
+      console.log("Updating quiz attempt with filtered data:", updateData);
       
       const attempt = await storage.updateQuizAttempt(attemptId, updateData);
       
