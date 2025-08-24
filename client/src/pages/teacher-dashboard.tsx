@@ -71,6 +71,9 @@ export default function TeacherDashboard() {
   const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState(false);
   const [newMaterialDialogOpen, setNewMaterialDialogOpen] = useState(false);
   const [showClassSelector, setShowClassSelector] = useState(false);
+  const [editLessonsDialogOpen, setEditLessonsDialogOpen] = useState(false);
+  const [editQuizzesDialogOpen, setEditQuizzesDialogOpen] = useState(false);
+  const [editReflectionsDialogOpen, setEditReflectionsDialogOpen] = useState(false);
   
   // Form states
   const [newClassName, setNewClassName] = useState("");
@@ -870,15 +873,30 @@ export default function TeacherDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-lessons">
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline" 
+                        data-testid="button-edit-lessons"
+                        onClick={() => setEditLessonsDialogOpen(true)}
+                      >
                         <BookOpen className="h-4 w-4 mr-2" />
                         Edit Lessons
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-quizzes">
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline" 
+                        data-testid="button-edit-quizzes"
+                        onClick={() => setEditQuizzesDialogOpen(true)}
+                      >
                         <Award className="h-4 w-4 mr-2" />
                         Edit Quizzes
                       </Button>
-                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-reflections">
+                      <Button 
+                        className="w-full justify-start" 
+                        variant="outline" 
+                        data-testid="button-edit-reflections"
+                        onClick={() => setEditReflectionsDialogOpen(true)}
+                      >
                         <FileText className="h-4 w-4 mr-2" />
                         Edit Reflection Questions
                       </Button>
@@ -917,6 +935,90 @@ export default function TeacherDashboard() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Edit Lessons Dialog */}
+        <Dialog open={editLessonsDialogOpen} onOpenChange={setEditLessonsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Lessons</DialogTitle>
+              <DialogDescription>
+                Modify lesson content for {teacherClasses.data?.find(c => c.id === selectedClassId)?.className}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Lesson editing interface will be implemented here. This will allow you to modify:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <li>Lesson titles and content</li>
+                <li>Learning objectives</li>
+                <li>Video URLs and resources</li>
+                <li>Lesson order and duration</li>
+              </ul>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setEditLessonsDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Quizzes Dialog */}
+        <Dialog open={editQuizzesDialogOpen} onOpenChange={setEditQuizzesDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Quizzes</DialogTitle>
+              <DialogDescription>
+                Modify quiz questions and settings for {teacherClasses.data?.find(c => c.id === selectedClassId)?.className}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Quiz editing interface will be implemented here. This will allow you to modify:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <li>Quiz questions and answer choices</li>
+                <li>Correct answers and explanations</li>
+                <li>Time limits and passing scores</li>
+                <li>Question order and types</li>
+              </ul>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setEditQuizzesDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Reflection Questions Dialog */}
+        <Dialog open={editReflectionsDialogOpen} onOpenChange={setEditReflectionsDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Reflection Questions</DialogTitle>
+              <DialogDescription>
+                Modify reflection questions for {teacherClasses.data?.find(c => c.id === selectedClassId)?.className}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Reflection question editing interface will be implemented here. This will allow you to modify:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <li>Question text and prompts</li>
+                <li>Question categories and topics</li>
+                <li>Order and grouping</li>
+                <li>Associated lessons and units</li>
+              </ul>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setEditReflectionsDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
