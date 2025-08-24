@@ -5,7 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,6 +23,13 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [timeRemaining, setTimeRemaining] = useState((quiz.timeLimit || 15) * 60); // Convert to seconds
   const [quizAttemptId, setQuizAttemptId] = useState<number | null>(null);
+
+  // Query to get active attempt
+  const { data: activeAttempt } = useQuery({
+    queryKey: [`/api/quizzes/${quiz.id}/active-attempt`],
+    enabled: !quizAttemptId, // Only fetch if we don't have an attempt ID
+    refetchInterval: 1000, // Poll every second
+  });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Timer effect
@@ -49,13 +56,17 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
       // First try to get existing active attempt
       try {
         const activeAttempt = await apiRequest("GET", `/api/quizzes/${quiz.id}/active-attempt`);
+        console.log("Found existing attempt:", activeAttempt);
         return activeAttempt;
       } catch (error) {
         // If no active attempt, create a new one
+        console.log("Creating new attempt");
         return await apiRequest("POST", `/api/quizzes/${quiz.id}/attempts`, {});
       }
     },
     onSuccess: (attempt) => {
+      console.log("Full attempt response:", attempt);
+      console.log("Setting quizAttemptId to:", attempt.id);
       setQuizAttemptId(attempt.id);
     },
     onError: (error) => {
@@ -144,7 +155,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
         await apiRequest("PUT", `/api/quiz-attempts/${quizAttemptId}`, {
           score,
           isPassed,
-          completedAt: new Date().toISOString(),
+          completedAt: new Date(),
           timeSpent: Math.round(((quiz.timeLimit || 15) * 60 - timeRemaining) / 60),
         });
         console.log("Quiz attempt updated successfully");
@@ -185,12 +196,21 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
     },
   });
 
+  // Set quiz attempt ID when active attempt is found
+  useEffect(() => {
+    if (activeAttempt && activeAttempt.id && !quizAttemptId) {
+      console.log("Setting quiz attempt ID from active attempt:", activeAttempt.id);
+      setQuizAttemptId(activeAttempt.id);
+    }
+  }, [activeAttempt, quizAttemptId]);
+
   // Initialize quiz attempt on component mount
   useEffect(() => {
-    if (!quizAttemptId && !createAttemptMutation.isPending) {
+    if (!quizAttemptId && !createAttemptMutation.isPending && !createAttemptMutation.isSuccess && !activeAttempt) {
+      console.log("Attempting to create/get quiz attempt");
       createAttemptMutation.mutate();
     }
-  }, [quizAttemptId, createAttemptMutation.isPending]);
+  }, [quizAttemptId, createAttemptMutation.isPending, createAttemptMutation.isSuccess, activeAttempt]);
 
   const handleAnswerChange = (value: string) => {
     setAnswers(prev => ({
