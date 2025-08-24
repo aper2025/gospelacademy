@@ -94,9 +94,9 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <Card className="shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Biblical Education Portal</CardTitle>
+            <CardTitle className="text-2xl font-bold">Ascent Learning</CardTitle>
             <CardDescription>
-              Access your New Testament Survey course
+              Access your courses and learning materials
             </CardDescription>
           </CardHeader>
           <CardContent>

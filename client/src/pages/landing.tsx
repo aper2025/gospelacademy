@@ -11,10 +11,10 @@ export default function Landing() {
         <div className="relative px-4 py-24 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="text-center text-white">
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-              Learning Portal
+              Ascent Learning
             </h1>
             <p className="mt-6 text-lg leading-8 text-blue-100">
-              Discover the teachings and ministry of Jesus Christ through comprehensive biblical study
+              Elevate your learning experience with comprehensive courses and interactive content
             </p>
             <div className="mt-10 flex items-center justify-center">
               <Button 
@@ -34,10 +34,10 @@ export default function Landing() {
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-              Comprehensive Biblical Education
+              Comprehensive Online Education
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Experience engaging lessons, interactive quizzes, and track your spiritual journey
+              Experience engaging lessons, interactive quizzes, and track your learning progress
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export default function Landing() {
               Ready to Begin Your Journey?
             </h2>
             <p className="mt-4 text-lg text-blue-100">
-              Join our learning community and deepen your understanding of God's word
+              Join our learning community and advance your knowledge
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -173,14 +173,6 @@ export default function Landing() {
                 onClick={() => window.location.href = "/auth"}
               >
                 Sign In / Sign Up
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-primary font-semibold px-8 py-3 text-lg"
-                onClick={() => window.location.href = "/api/login"}
-              >
-                Sign in with Replit
               </Button>
             </div>
           </div>
