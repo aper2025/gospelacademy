@@ -13,6 +13,7 @@ import Lesson from "@/pages/lesson";
 import Quiz from "@/pages/quiz";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import Textbook from "@/pages/textbook";
+import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,7 +22,10 @@ function Router() {
   return (
     <Switch>
       {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/auth" component={AuthPage} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />

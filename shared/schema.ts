@@ -28,6 +28,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  password: varchar("password"), // for email/password auth, null for OAuth users
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -524,3 +525,20 @@ export type InsertTeacherClassStudent = z.infer<typeof insertTeacherClassStudent
 export type TeacherClassStudent = typeof teacherClassStudents.$inferSelect;
 export type InsertTeacherMaterial = z.infer<typeof insertTeacherMaterialSchema>;
 export type TeacherMaterial = typeof teacherMaterials.$inferSelect;
+
+// Authentication schemas
+export const signupSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.enum(["student", "teacher"]).default("student"),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type SignupData = z.infer<typeof signupSchema>;
+export type LoginData = z.infer<typeof loginSchema>;

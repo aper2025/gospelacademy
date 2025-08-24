@@ -20,9 +20,17 @@ export default function Landing() {
               <Button 
                 size="lg"
                 className="bg-white text-primary hover:bg-gray-100 font-semibold px-8 py-3 text-lg"
+                onClick={() => window.location.href = "/auth"}
+              >
+                Sign In / Sign Up
+              </Button>
+              <Button 
+                size="lg"
+                variant="outline"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-primary font-semibold px-8 py-3 text-lg"
                 onClick={() => window.location.href = "/api/login"}
               >
-                Start Learning
+                Sign in with Replit
               </Button>
             </div>
           </div>
@@ -166,13 +174,21 @@ export default function Landing() {
             <p className="mt-4 text-lg text-blue-100">
               Join our learning community and deepen your understanding of God's word
             </p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg"
                 className="bg-white text-primary hover:bg-gray-100 font-semibold px-8 py-3 text-lg"
+                onClick={() => window.location.href = "/auth"}
+              >
+                Sign In / Sign Up
+              </Button>
+              <Button 
+                size="lg"
+                variant="outline"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-primary font-semibold px-8 py-3 text-lg"
                 onClick={() => window.location.href = "/api/login"}
               >
-                Get Started Today
+                Sign in with Replit
               </Button>
             </div>
           </div>
