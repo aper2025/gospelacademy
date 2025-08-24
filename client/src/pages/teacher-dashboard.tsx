@@ -70,6 +70,7 @@ export default function TeacherDashboard() {
   const [newClassDialogOpen, setNewClassDialogOpen] = useState(false);
   const [addStudentsDialogOpen, setAddStudentsDialogOpen] = useState(false);
   const [newMaterialDialogOpen, setNewMaterialDialogOpen] = useState(false);
+  const [showClassSelector, setShowClassSelector] = useState(false);
   
   // Form states
   const [newClassName, setNewClassName] = useState("");
@@ -325,14 +326,21 @@ export default function TeacherDashboard() {
 
   const handleCreateMaterial = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!materialTitle || !materialContent) return;
+    if (!materialTitle || !materialContent || !selectedClassId) {
+      toast({
+        title: "Error",
+        description: "Please select a class before adding materials",
+        variant: "destructive",
+      });
+      return;
+    }
     
     createMaterialMutation.mutate({
       title: materialTitle,
       type: materialType,
       content: materialContent,
       description: materialDescription,
-      classId: selectedClassId || undefined,
+      classId: selectedClassId,
     });
   };
 
@@ -347,6 +355,51 @@ export default function TeacherDashboard() {
             Manage your classes, students, and course content
           </p>
         </div>
+
+        {/* Class Selection Banner for Content Management */}
+        {(activeTab === "materials" || activeTab === "content") && (
+          <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <h3 className="font-medium text-blue-900 dark:text-blue-100">Select a Class</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {selectedClassId 
+                        ? `Currently editing content for: ${teacherClasses.data?.find(c => c.id === selectedClassId)?.className}` 
+                        : "You must select a class before making content changes"
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedClassId?.toString() || ""} onValueChange={(value) => setSelectedClassId(parseInt(value))}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Choose a class to modify" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teacherClasses.data?.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id.toString()}>
+                          {cls.className}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedClassId && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedClassId(null)}
+                    >
+                      Clear Selection
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
@@ -653,10 +706,20 @@ export default function TeacherDashboard() {
 
           <TabsContent value="materials" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Teaching Materials</h2>
+              <div>
+                <h2 className="text-2xl font-bold">Teaching Materials</h2>
+                {selectedClassId && (
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Managing materials for: {teacherClasses.data?.find(c => c.id === selectedClassId)?.className}
+                  </p>
+                )}
+              </div>
               <Dialog open={newMaterialDialogOpen} onOpenChange={setNewMaterialDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button data-testid="button-add-material">
+                  <Button 
+                    data-testid="button-add-material"
+                    disabled={!selectedClassId}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Material
                   </Button>
@@ -719,102 +782,139 @@ export default function TeacherDashboard() {
               </Dialog>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {teacherMaterials?.map((material) => (
-                <Card key={material.id} className="card-shadow" data-testid={`material-card-${material.id}`}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {material.type === 'link' && <LinkIcon className="h-4 w-4" />}
-                      {material.type === 'file' && <Upload className="h-4 w-4" />}
-                      {material.type === 'url' && <BookOpen className="h-4 w-4" />}
-                      {material.title}
-                    </CardTitle>
-                    <CardDescription>{material.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {material.content}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Added: {new Date(material.createdAt).toLocaleDateString()}
-                      </p>
-                      <Badge variant="outline" className="capitalize">
-                        {material.type}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              )) || (
-                <p className="text-gray-500 col-span-full text-center py-8">
-                  No materials added yet. Add your first teaching material to get started.
-                </p>
-              )}
-            </div>
+            {!selectedClassId ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Select a Class</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Choose a class above to add and manage teaching materials specifically for that class
+                  </p>
+                  <Button onClick={() => setActiveTab("classes")} data-testid="button-go-to-classes-materials">
+                    Go to Classes
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {teacherMaterials?.filter(material => material.classId === selectedClassId)?.map((material) => (
+                  <Card key={material.id} className="card-shadow" data-testid={`material-card-${material.id}`}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        {material.type === 'link' && <LinkIcon className="h-4 w-4" />}
+                        {material.type === 'file' && <Upload className="h-4 w-4" />}
+                        {material.type === 'url' && <BookOpen className="h-4 w-4" />}
+                        {material.title}
+                      </CardTitle>
+                      <CardDescription>{material.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {material.content}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Added: {new Date(material.createdAt).toLocaleDateString()}
+                        </p>
+                        <Badge variant="outline" className="capitalize">
+                          {material.type}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )) || (
+                  <p className="text-gray-500 col-span-full text-center py-8">
+                    No materials added yet for this class. Add your first teaching material to get started.
+                  </p>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="content" className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Content Management</h2>
+              <div>
+                <h2 className="text-2xl font-bold">Content Management</h2>
+                {selectedClassId && (
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Editing content for: {teacherClasses.data?.find(c => c.id === selectedClassId)?.className}
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="card-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Edit className="h-5 w-5" />
-                    Edit Course Content
-                  </CardTitle>
-                  <CardDescription>
-                    Modify lessons, quizzes, and reflection questions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-edit-lessons">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Edit Lessons
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-edit-quizzes">
-                      <Award className="h-4 w-4 mr-2" />
-                      Edit Quizzes
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-edit-reflections">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Edit Reflection Questions
-                    </Button>
-                  </div>
+            {!selectedClassId ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Select a Class</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Choose a class above to modify lessons, quizzes, and reflection questions specifically for that class
+                  </p>
+                  <Button onClick={() => setActiveTab("classes")} data-testid="button-go-to-classes-content">
+                    Go to Classes
+                  </Button>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="card-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Edit className="h-5 w-5" />
+                      Edit Course Content
+                    </CardTitle>
+                    <CardDescription>
+                      Modify lessons, quizzes, and reflection questions for the selected class
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-lessons">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Edit Lessons
+                      </Button>
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-quizzes">
+                        <Award className="h-4 w-4 mr-2" />
+                        Edit Quizzes
+                      </Button>
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-edit-reflections">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Edit Reflection Questions
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card className="card-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Analytics & Reports
-                  </CardTitle>
-                  <CardDescription>
-                    View detailed student progress and performance
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-view-analytics">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      View Analytics
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-export-grades">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Export Grades
-                    </Button>
-                    <Button className="w-full justify-start" variant="outline" data-testid="button-progress-reports">
-                      <Users className="h-4 w-4 mr-2" />
-                      Progress Reports
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <Card className="card-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Analytics & Reports
+                    </CardTitle>
+                    <CardDescription>
+                      View detailed student progress and performance for this class
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-view-analytics">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        View Analytics
+                      </Button>
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-export-grades">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Export Grades
+                      </Button>
+                      <Button className="w-full justify-start" variant="outline" data-testid="button-progress-reports">
+                        <Users className="h-4 w-4 mr-2" />
+                        Progress Reports
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

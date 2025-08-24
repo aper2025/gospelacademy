@@ -63,6 +63,7 @@ export const units = pgTable("units", {
 export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
   unitId: integer("unit_id").references(() => units.id).notNull(),
+  classId: integer("class_id").references(() => teacherClasses.id), // null for global lessons
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   duration: integer("duration"), // in minutes
@@ -76,6 +77,7 @@ export const lessons = pgTable("lessons", {
 export const reflectionQuestions = pgTable("reflection_questions", {
   id: serial("id").primaryKey(),
   lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  classId: integer("class_id").references(() => teacherClasses.id), // null for global questions
   question: text("question").notNull(),
   correctAnswer: varchar("correct_answer", { length: 1 }),
   explanation: text("explanation"),
@@ -87,6 +89,7 @@ export const reflectionQuestions = pgTable("reflection_questions", {
 export const additionalResources = pgTable("additional_resources", {
   id: serial("id").primaryKey(),
   lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  classId: integer("class_id").references(() => teacherClasses.id), // null for global resources
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   url: varchar("url"),
@@ -98,6 +101,7 @@ export const additionalResources = pgTable("additional_resources", {
 export const quizzes = pgTable("quizzes", {
   id: serial("id").primaryKey(),
   lessonId: integer("lesson_id").references(() => lessons.id).notNull(),
+  classId: integer("class_id").references(() => teacherClasses.id), // null for global quizzes
   title: varchar("title", { length: 255 }).notNull(),
   timeLimit: integer("time_limit"), // in minutes
   passingScore: integer("passing_score").default(70),
