@@ -15,6 +15,8 @@ import TeacherDashboard from "@/pages/teacher-dashboard";
 import Textbook from "@/pages/textbook";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
+import MyCoursesPage from "@/pages/my-courses";
+import ProgressPage from "@/pages/progress";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -29,6 +31,8 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/courses" component={MyCoursesPage} />
+          <Route path="/progress" component={ProgressPage} />
           <Route path="/unit/:id" component={Unit} />
           <Route path="/lessons/:id" component={Lesson} />
           <Route path="/quiz/:id" component={Quiz} />

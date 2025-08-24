@@ -405,7 +405,7 @@ export const teacherClasses = pgTable("teacher_classes", {
   teacherId: varchar("teacher_id").references(() => users.id).notNull(),
   className: varchar("class_name", { length: 255 }).notNull(),
   description: text("description"),
-  courseId: integer("course_id").references(() => courses.id).notNull(),
+  courseId: integer("course_id").references(() => courses.id), // Can be null initially
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

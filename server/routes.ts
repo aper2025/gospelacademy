@@ -19,8 +19,18 @@ import {
   signupSchema,
   loginSchema,
   quizLocks,
+  courses,
+  teacherClasses,
+  teacherClassStudents,
+  courseEnrollments,
+  lessonProgress,
+  quizAttempts,
+  lessons,
+  quizzes,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
+import { db } from "./db";
+import { eq, and, desc, isNotNull, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up email/password session management
@@ -901,6 +911,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update class course assignment
+  app.put('/api/teacher/classes/:classId/course', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can assign courses" });
+      }
+
+      const classId = parseInt(req.params.classId);
+      const { courseId } = req.body;
+
+      const existingClass = await storage.getTeacherClass(classId);
+      if (!existingClass || existingClass.teacherId !== userId) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      // Update the class with the course
+      const [updatedClass] = await db.update(teacherClasses)
+        .set({ courseId: parseInt(courseId) })
+        .where(eq(teacherClasses.id, classId))
+        .returning();
+
+      // Enroll all students in the class to the course
+      const classStudents = await db.select()
+        .from(teacherClassStudents)
+        .where(eq(teacherClassStudents.classId, classId));
+
+      for (const student of classStudents) {
+        // Check if already enrolled
+        const [existingEnrollment] = await db.select()
+          .from(courseEnrollments)
+          .where(and(
+            eq(courseEnrollments.userId, student.studentId),
+            eq(courseEnrollments.courseId, parseInt(courseId))
+          ));
+
+        if (!existingEnrollment) {
+          await db.insert(courseEnrollments).values({
+            userId: student.studentId,
+            courseId: parseInt(courseId),
+          });
+        }
+      }
+
+      res.json(updatedClass);
+    } catch (error) {
+      console.error("Error updating class course:", error);
+      res.status(500).json({ message: "Failed to update class course" });
+    }
+  });
+
   // Student Management Routes
   app.get('/api/teacher/classes/:classId/students', requireAuth, async (req: any, res) => {
     try {
@@ -997,6 +1060,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing student from class:", error);
       res.status(500).json({ message: "Failed to remove student from class" });
+    }
+  });
+
+  // Student enrollment and progress routes
+  app.get('/api/my-enrolled-courses', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+
+      if (user?.role === 'student') {
+        // For students: only show courses they're enrolled in through classes
+        const enrolledCourses = await db.select({
+          id: courses.id,
+          title: courses.title,
+          description: courses.description,
+          totalLessons: courses.totalLessons,
+          totalQuizzes: courses.totalQuizzes,
+          estimatedDuration: courses.estimatedDuration,
+          className: teacherClasses.className,
+        })
+        .from(courseEnrollments)
+        .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
+        .leftJoin(teacherClassStudents, eq(teacherClassStudents.studentId, userId))
+        .leftJoin(teacherClasses, and(
+          eq(teacherClassStudents.classId, teacherClasses.id),
+          eq(teacherClasses.courseId, courses.id)
+        ))
+        .where(eq(courseEnrollments.userId, userId));
+
+        res.json(enrolledCourses);
+      } else if (user?.role === 'teacher') {
+        // For teachers: show courses they're teaching
+        const teachingCourses = await db.select({
+          id: courses.id,
+          title: courses.title,
+          description: courses.description,
+          totalLessons: courses.totalLessons,
+          totalQuizzes: courses.totalQuizzes,
+          estimatedDuration: courses.estimatedDuration,
+        })
+        .from(teacherClasses)
+        .innerJoin(courses, eq(teacherClasses.courseId, courses.id))
+        .where(eq(teacherClasses.teacherId, userId));
+
+        res.json(teachingCourses);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error("Error fetching enrolled courses:", error);
+      res.status(500).json({ message: "Failed to fetch enrolled courses" });
+    }
+  });
+
+  app.get('/api/my-detailed-progress', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+
+      // Get enrolled courses with progress
+      const enrolledCourses = await db.select({
+        id: courses.id,
+        title: courses.title,
+        progress: courseEnrollments.progress,
+        isCompleted: courseEnrollments.completedAt,
+        className: teacherClasses.className,
+      })
+      .from(courseEnrollments)
+      .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
+      .leftJoin(teacherClassStudents, eq(teacherClassStudents.studentId, userId))
+      .leftJoin(teacherClasses, and(
+        eq(teacherClassStudents.classId, teacherClasses.id),
+        eq(teacherClasses.courseId, courses.id)
+      ))
+      .where(eq(courseEnrollments.userId, userId));
+
+      // Get totals
+      const totalLessonsCompleted = await db.select({ count: sql<number>`count(*)` })
+        .from(lessonProgress)
+        .where(and(
+          eq(lessonProgress.userId, userId),
+          eq(lessonProgress.isCompleted, true)
+        ));
+
+      const totalQuizzesPassed = await db.select({ count: sql<number>`count(*)` })
+        .from(quizAttempts)
+        .where(and(
+          eq(quizAttempts.userId, userId),
+          eq(quizAttempts.isPassed, true)
+        ));
+
+      res.json({
+        totalCoursesEnrolled: enrolledCourses.length,
+        totalLessonsCompleted: totalLessonsCompleted[0]?.count || 0,
+        totalQuizzesPassed: totalQuizzesPassed[0]?.count || 0,
+        courses: enrolledCourses,
+      });
+    } catch (error) {
+      console.error("Error fetching detailed progress:", error);
+      res.status(500).json({ message: "Failed to fetch detailed progress" });
+    }
+  });
+
+  app.get('/api/my-recent-activity', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+
+      // Get recent lesson completions
+      const recentLessons = await db.select({
+        type: sql<string>`'lesson'`,
+        title: lessons.title,
+        timestamp: lessonProgress.completedAt,
+        status: sql<string>`'completed'`,
+      })
+      .from(lessonProgress)
+      .innerJoin(lessons, eq(lessonProgress.lessonId, lessons.id))
+      .where(and(
+        eq(lessonProgress.userId, userId),
+        eq(lessonProgress.isCompleted, true),
+        isNotNull(lessonProgress.completedAt)
+      ))
+      .orderBy(desc(lessonProgress.completedAt))
+      .limit(10);
+
+      // Get recent quiz attempts
+      const recentQuizzes = await db.select({
+        type: sql<string>`'quiz'`,
+        title: quizzes.title,
+        timestamp: quizAttempts.completedAt,
+        status: sql<string>`CASE WHEN ${quizAttempts.isPassed} THEN 'passed' ELSE 'failed' END`,
+        score: quizAttempts.score,
+      })
+      .from(quizAttempts)
+      .innerJoin(quizzes, eq(quizAttempts.quizId, quizzes.id))
+      .where(and(
+        eq(quizAttempts.userId, userId),
+        isNotNull(quizAttempts.completedAt)
+      ))
+      .orderBy(desc(quizAttempts.completedAt))
+      .limit(10);
+
+      // Combine and sort all activities
+      const allActivity = [...recentLessons, ...recentQuizzes]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 15);
+
+      res.json(allActivity);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity" });
     }
   });
 

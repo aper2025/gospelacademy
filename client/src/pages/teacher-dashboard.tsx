@@ -78,6 +78,8 @@ export default function TeacherDashboard() {
   // Form states
   const [newClassName, setNewClassName] = useState("");
   const [newClassDescription, setNewClassDescription] = useState("");
+  const [newClassCourseId, setNewClassCourseId] = useState<string>("");
+  const [selectedCourseForClass, setSelectedCourseForClass] = useState<string>("");
   const [studentEmails, setStudentEmails] = useState("");
   const [materialTitle, setMaterialTitle] = useState("");
   const [materialType, setMaterialType] = useState<'link' | 'file' | 'url'>('link');
@@ -132,7 +134,7 @@ export default function TeacherDashboard() {
 
   // Mutations
   const createClassMutation = useMutation({
-    mutationFn: async (classData: { className: string; description: string; courseId: number }) => {
+    mutationFn: async (classData: { className: string; description: string; courseId?: number }) => {
       const response = await apiRequest('POST', '/api/teacher/classes', classData);
       return await response.json();
     },
@@ -141,6 +143,7 @@ export default function TeacherDashboard() {
       setNewClassDialogOpen(false);
       setNewClassName("");
       setNewClassDescription("");
+      setNewClassCourseId("");
       toast({
         title: "Success",
         description: "Class created successfully",
@@ -242,6 +245,39 @@ export default function TeacherDashboard() {
     },
   });
 
+  const assignCourseMutation = useMutation({
+    mutationFn: async ({ classId, courseId }: { classId: number; courseId: number }) => {
+      const response = await apiRequest('PUT', `/api/teacher/classes/${classId}/course`, { courseId });
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
+      setSelectedCourseForClass("");
+      toast({
+        title: "Success",
+        description: "Course assigned to class successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to assign course to class",
+        variant: "destructive",
+      });
+    },
+  });
+
   const removeStudentMutation = useMutation({
     mutationFn: async ({ classId, studentId }: { classId: number; studentId: string }) => {
       const response = await apiRequest('DELETE', `/api/teacher/classes/${classId}/students/${studentId}`);
@@ -297,12 +333,21 @@ export default function TeacherDashboard() {
 
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClassName || !courses?.length) return;
+    if (!newClassName) return;
     
     createClassMutation.mutate({
       className: newClassName,
       description: newClassDescription,
-      courseId: courses[0].id, // Use first available course
+      courseId: newClassCourseId ? parseInt(newClassCourseId) : undefined,
+    });
+  };
+
+  const handleAssignCourse = (classId: number) => {
+    if (!selectedCourseForClass) return;
+    
+    assignCourseMutation.mutate({
+      classId,
+      courseId: parseInt(selectedCourseForClass),
     });
   };
 
@@ -550,6 +595,28 @@ export default function TeacherDashboard() {
                         data-testid="input-class-description"
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="classCourse">Course (Optional)</Label>
+                      <Select 
+                        value={newClassCourseId} 
+                        onValueChange={setNewClassCourseId}
+                        data-testid="select-class-course"
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a course (can be set later)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courses?.map((course: any) => (
+                            <SelectItem key={course.id} value={course.id.toString()}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        You can assign a course now or later from the class management page.
+                      </p>
+                    </div>
                     <Button type="submit" disabled={createClassMutation.isPending} data-testid="button-submit-class">
                       {createClassMutation.isPending ? "Creating..." : "Create Class"}
                     </Button>
@@ -569,10 +636,56 @@ export default function TeacherDashboard() {
                     <CardDescription>{teacherClass.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Created: {new Date(teacherClass.createdAt).toLocaleDateString()}
-                      </p>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Created: {new Date(teacherClass.createdAt).toLocaleDateString()}
+                        </p>
+                        {teacherClass.courseId ? (
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">
+                              Course Assigned
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4 text-orange-500" />
+                              <span className="text-sm text-orange-600">
+                                No course assigned
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              <Select 
+                                value={selectedCourseForClass} 
+                                onValueChange={setSelectedCourseForClass}
+                                data-testid={`select-course-for-class-${teacherClass.id}`}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select course to assign" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {courses?.map((course: any) => (
+                                    <SelectItem key={course.id} value={course.id.toString()}>
+                                      {course.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                size="sm" 
+                                className="w-full"
+                                onClick={() => handleAssignCourse(teacherClass.id)}
+                                disabled={!selectedCourseForClass || assignCourseMutation.isPending}
+                                data-testid={`button-assign-course-${teacherClass.id}`}
+                              >
+                                {assignCourseMutation.isPending ? "Assigning..." : "Assign Course"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="flex gap-2">
                         <Button 
                           size="sm" 

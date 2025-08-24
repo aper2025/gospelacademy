@@ -30,8 +30,8 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: courses, isLoading: coursesLoading } = useQuery({
-    queryKey: ["/api/courses"],
+  const { data: enrolledCourses, isLoading: coursesLoading } = useQuery({
+    queryKey: ["/api/my-enrolled-courses"],
     enabled: isAuthenticated,
   });
 
