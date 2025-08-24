@@ -770,7 +770,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/quiz-attempts/:id', requireAuth, async (req: any, res) => {
     try {
       const attemptId = parseInt(req.params.id);
-      const attempt = await storage.updateQuizAttempt(attemptId, req.body);
+      
+      // Convert completedAt string to Date object if present
+      const updateData = { ...req.body };
+      if (updateData.completedAt && typeof updateData.completedAt === 'string') {
+        updateData.completedAt = new Date(updateData.completedAt);
+      }
+      
+      const attempt = await storage.updateQuizAttempt(attemptId, updateData);
       
       if (!attempt) {
         return res.status(404).json({ message: "Quiz attempt not found" });
