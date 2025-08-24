@@ -172,6 +172,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get course overview stats
+  app.get('/api/courses/:courseId/overview', requireAuth, async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.courseId);
+      const overview = await storage.getCourseOverview(courseId);
+      res.json(overview);
+    } catch (error) {
+      console.error("Error fetching course overview:", error);
+      res.status(500).json({ message: "Failed to fetch course overview" });
+    }
+  });
+
+  // Get user progress stats
+  app.get('/api/courses/:courseId/my-progress-stats', requireAuth, async (req: any, res) => {
+    try {
+      const courseId = parseInt(req.params.courseId);
+      const userId = req.currentUser.id;
+      
+      const progressStats = await storage.getUserProgressStats(userId, courseId);
+      res.json(progressStats);
+    } catch (error) {
+      console.error("Error fetching user progress stats:", error);
+      res.status(500).json({ message: "Failed to fetch progress stats" });
+    }
+  });
+
+  // Get user recent activity
+  app.get('/api/courses/:courseId/my-recent-activity', requireAuth, async (req: any, res) => {
+    try {
+      const courseId = parseInt(req.params.courseId);
+      const userId = req.currentUser.id;
+      
+      const recentActivity = await storage.getUserRecentActivity(userId, courseId);
+      res.json(recentActivity);
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+      res.status(500).json({ message: "Failed to fetch recent activity" });
+    }
+  });
+
   app.get('/api/courses/:id', requireAuth, async (req, res) => {
     try {
       const courseId = parseInt(req.params.id);

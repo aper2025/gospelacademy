@@ -45,6 +45,27 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: courseOverview } = useQuery<{
+    totalLessons: number;
+    totalUnits: number;
+    totalQuizzes: number;
+    estimatedDuration: string;
+  }>({
+    queryKey: ["/api/courses/1/overview"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: recentActivity } = useQuery<Array<{
+    type: 'lesson' | 'quiz' | 'reflection';
+    title: string;
+    timestamp: string;
+    status: string;
+    score?: number;
+  }>>({
+    queryKey: ["/api/courses/1/my-recent-activity"],
+    enabled: isAuthenticated,
+  });
+
   // Type guard for progress data
   const progressArray = Array.isArray(progress) ? progress : [];
 
@@ -86,15 +107,15 @@ export default function Dashboard() {
               <CardContent className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">12</div>
+                    <div className="text-2xl font-bold text-primary">{courseOverview?.totalLessons || 0}</div>
                     <div className="text-sm text-muted">Lessons</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-secondary">8 weeks</div>
+                    <div className="text-2xl font-bold text-secondary">{courseOverview?.estimatedDuration || 'Loading...'}</div>
                     <div className="text-sm text-muted">Duration</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-accent">4</div>
+                    <div className="text-2xl font-bold text-accent">{courseOverview?.totalQuizzes || 0}</div>
                     <div className="text-sm text-muted">Assessments</div>
                   </div>
                 </div>
@@ -221,29 +242,60 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Completed Lesson 2: The Ministry Begins</div>
-                      <div className="text-sm text-muted">2 hours ago</div>
+                  {recentActivity && recentActivity.length > 0 ? (
+                    recentActivity.map((activity: any, index: number) => {
+                      const activityTypeColors = {
+                        lesson: 'bg-blue-50 dark:bg-blue-950/20',
+                        quiz: 'bg-green-50 dark:bg-green-950/20',
+                        reflection: 'bg-orange-50 dark:bg-orange-950/20',
+                      };
+                      
+                      const formatTimestamp = (timestamp: string) => {
+                        const date = new Date(timestamp);
+                        const now = new Date();
+                        const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+                        
+                        if (diffHours < 1) return 'Less than an hour ago';
+                        if (diffHours < 24) return `${diffHours} hours ago`;
+                        const diffDays = Math.floor(diffHours / 24);
+                        if (diffDays === 1) return '1 day ago';
+                        if (diffDays < 7) return `${diffDays} days ago`;
+                        return date.toLocaleDateString();
+                      };
+
+                      return (
+                        <div 
+                          key={index}
+                          className={`flex items-center justify-between p-4 rounded-lg ${activityTypeColors[activity.type] || 'bg-gray-50 dark:bg-gray-800'}`}
+                        >
+                          <div>
+                            <div className="font-medium">
+                              {activity.title}
+                              {activity.score !== undefined && ` (${activity.score}%)`}
+                            </div>
+                            <div className="text-sm text-muted">
+                              {formatTimestamp(activity.timestamp)}
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium">
+                            <span className={
+                              activity.status === 'Completed' ? 'text-secondary' :
+                              activity.status === 'Passed' ? 'text-green-600' :
+                              activity.status === 'Needs Review' ? 'text-red-600' :
+                              'text-accent'
+                            }>
+                              {activity.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted">
+                      <div className="font-medium">No recent activity</div>
+                      <div className="text-sm">Start learning to see your progress here!</div>
                     </div>
-                    <div className="text-sm text-secondary font-medium">Completed</div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Quiz 2 Score: 89%</div>
-                      <div className="text-sm text-muted">1 day ago</div>
-                    </div>
-                    <div className="text-sm text-secondary font-medium">Passed</div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                    <div>
-                      <div className="font-medium">Reflection Questions Submitted</div>
-                      <div className="text-sm text-muted">3 days ago</div>
-                    </div>
-                    <div className="text-sm text-accent font-medium">Submitted</div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

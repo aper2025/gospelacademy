@@ -68,6 +68,31 @@ export interface IStorage {
   }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Course overview and progress stats
+  getCourseOverview(courseId: number): Promise<{
+    totalLessons: number;
+    totalUnits: number;
+    totalQuizzes: number;
+    estimatedDuration: string;
+  }>;
+  getUserProgressStats(userId: string, courseId: number): Promise<{
+    lessonsCompleted: number;
+    totalLessons: number;
+    quizzesCompleted: number;
+    totalQuizzes: number;
+    currentUnit: number;
+    totalUnits: number;
+    overallProgress: number;
+    averageScore: number;
+  }>;
+  getUserRecentActivity(userId: string, courseId: number, limit?: number): Promise<Array<{
+    type: 'lesson' | 'quiz' | 'reflection';
+    title: string;
+    timestamp: Date;
+    status: string;
+    score?: number;
+  }>>;
+  
   // Course operations
   getCourses(): Promise<Course[]>;
   getCourse(id: number): Promise<Course | undefined>;
@@ -495,6 +520,204 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizResponsesByAttempt(attemptId: number): Promise<QuizResponse[]> {
     return await db.select().from(quizResponses).where(eq(quizResponses.attemptId, attemptId));
+  }
+
+  // Course overview stats
+  async getCourseOverview(courseId: number): Promise<{
+    totalLessons: number;
+    totalUnits: number;
+    totalQuizzes: number;
+    estimatedDuration: string;
+  }> {
+    const unitsCount = await db.select({ count: count() }).from(units).where(eq(units.courseId, courseId));
+    const totalUnits = unitsCount[0]?.count || 0;
+
+    const lessonsCount = await db
+      .select({ count: count() })
+      .from(lessons)
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(eq(units.courseId, courseId));
+    const totalLessons = lessonsCount[0]?.count || 0;
+
+    const quizzesCount = await db
+      .select({ count: count() })
+      .from(quizzes)
+      .innerJoin(lessons, eq(lessons.id, quizzes.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(eq(units.courseId, courseId));
+    const totalQuizzes = quizzesCount[0]?.count || 0;
+
+    // Calculate estimated duration based on lessons
+    const estimatedWeeks = Math.ceil(totalLessons / 2); // Assume 2 lessons per week
+    const estimatedDuration = `${estimatedWeeks} weeks`;
+
+    return {
+      totalLessons,
+      totalUnits,
+      totalQuizzes,
+      estimatedDuration,
+    };
+  }
+
+  // Progress statistics for a user
+  async getUserProgressStats(userId: string, courseId: number): Promise<{
+    lessonsCompleted: number;
+    totalLessons: number;
+    quizzesCompleted: number;
+    totalQuizzes: number;
+    currentUnit: number;
+    totalUnits: number;
+    overallProgress: number;
+    averageScore: number;
+  }> {
+    // Get course overview
+    const overview = await this.getCourseOverview(courseId);
+    
+    // Get user's lesson progress
+    const userLessonsProgress = await db
+      .select()
+      .from(lessonProgress)
+      .innerJoin(lessons, eq(lessons.id, lessonProgress.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(and(eq(lessonProgress.userId, userId), eq(units.courseId, courseId)));
+
+    const lessonsCompleted = userLessonsProgress.filter(p => p.lesson_progress.isCompleted).length;
+
+    // Get user's quiz attempts
+    const userQuizzes = await db
+      .select()
+      .from(quizAttempts)
+      .innerJoin(quizzes, eq(quizzes.id, quizAttempts.quizId))
+      .innerJoin(lessons, eq(lessons.id, quizzes.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(and(eq(quizAttempts.userId, userId), eq(units.courseId, courseId)));
+
+    const quizzesCompleted = userQuizzes.length;
+    const averageScore = userQuizzes.length > 0 
+      ? Math.round(userQuizzes.reduce((sum, q) => sum + (q.quiz_attempts.score || 0), 0) / userQuizzes.length)
+      : 0;
+
+    // Calculate current unit (highest unit with any progress)
+    const currentUnit = userLessonsProgress.length > 0 
+      ? Math.max(...userLessonsProgress.map(p => p.units.orderIndex)) + 1
+      : 1;
+
+    // Calculate overall progress
+    const overallProgress = overview.totalLessons > 0 
+      ? Math.round((lessonsCompleted / overview.totalLessons) * 100)
+      : 0;
+
+    return {
+      lessonsCompleted,
+      totalLessons: overview.totalLessons,
+      quizzesCompleted,
+      totalQuizzes: overview.totalQuizzes,
+      currentUnit,
+      totalUnits: overview.totalUnits,
+      overallProgress,
+      averageScore,
+    };
+  }
+
+  // Get recent activity for a user
+  async getUserRecentActivity(userId: string, courseId: number, limit: number = 5): Promise<Array<{
+    type: 'lesson' | 'quiz' | 'reflection';
+    title: string;
+    timestamp: Date;
+    status: string;
+    score?: number;
+  }>> {
+    const activities: Array<{
+      type: 'lesson' | 'quiz' | 'reflection';
+      title: string;
+      timestamp: Date;
+      status: string;
+      score?: number;
+    }> = [];
+
+    // Get recent lesson completions
+    const recentLessons = await db
+      .select({
+        lessonTitle: lessons.title,
+        timestamp: lessonProgress.completedAt,
+        isCompleted: lessonProgress.isCompleted,
+      })
+      .from(lessonProgress)
+      .innerJoin(lessons, eq(lessons.id, lessonProgress.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(and(eq(lessonProgress.userId, userId), eq(units.courseId, courseId)))
+      .orderBy(desc(lessonProgress.completedAt))
+      .limit(3);
+
+    // Get recent quiz attempts
+    const recentQuizzes = await db
+      .select({
+        quizTitle: quizzes.title,
+        timestamp: quizAttempts.completedAt,
+        score: quizAttempts.score,
+      })
+      .from(quizAttempts)
+      .innerJoin(quizzes, eq(quizzes.id, quizAttempts.quizId))
+      .innerJoin(lessons, eq(lessons.id, quizzes.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(and(eq(quizAttempts.userId, userId), eq(units.courseId, courseId)))
+      .orderBy(desc(quizAttempts.completedAt))
+      .limit(3);
+
+    // Get recent reflection responses
+    const recentReflections = await db
+      .select({
+        timestamp: reflectionResponses.createdAt,
+        lessonTitle: lessons.title,
+      })
+      .from(reflectionResponses)
+      .innerJoin(reflectionQuestions, eq(reflectionQuestions.id, reflectionResponses.questionId))
+      .innerJoin(lessons, eq(lessons.id, reflectionQuestions.lessonId))
+      .innerJoin(units, eq(units.id, lessons.unitId))
+      .where(and(eq(reflectionResponses.userId, userId), eq(units.courseId, courseId)))
+      .orderBy(desc(reflectionResponses.createdAt))
+      .limit(2);
+
+    // Add lesson activities
+    recentLessons.forEach(lesson => {
+      if (lesson.timestamp) {
+        activities.push({
+          type: 'lesson',
+          title: `Completed: ${lesson.lessonTitle}`,
+          timestamp: lesson.timestamp,
+          status: lesson.isCompleted ? 'Completed' : 'In Progress',
+        });
+      }
+    });
+
+    // Add quiz activities
+    recentQuizzes.forEach(quiz => {
+      if (quiz.timestamp) {
+        const score = quiz.score || 0;
+        activities.push({
+          type: 'quiz',
+          title: `${quiz.quizTitle}`,
+          timestamp: quiz.timestamp,
+          status: score >= 70 ? 'Passed' : 'Needs Review',
+          score,
+        });
+      }
+    });
+
+    // Add reflection activities
+    recentReflections.forEach(reflection => {
+      activities.push({
+        type: 'reflection',
+        title: `Reflection Questions: ${reflection.lessonTitle}`,
+        timestamp: reflection.timestamp,
+        status: 'Submitted',
+      });
+    });
+
+    // Sort by timestamp and limit
+    return activities
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
   }
 
   // Statistics and reporting
