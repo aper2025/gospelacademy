@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/courses', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/units', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -321,7 +321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/lessons', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -339,7 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/lessons/:id', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -375,7 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/reflection-questions', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -405,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/resources', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -460,7 +460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/quizzes', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -479,7 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course enrollment
   app.get('/api/my-enrollments', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const enrollments = await storage.getCourseEnrollmentsByUser(userId);
       res.json(enrollments);
     } catch (error) {
@@ -490,7 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/courses/:courseId/enroll', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const courseId = parseInt(req.params.courseId);
       
       // Check if already enrolled
@@ -514,7 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Progress tracking
   app.post('/api/lessons/:lessonId/progress', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const lessonId = parseInt(req.params.lessonId);
       
       const progress = await storage.createOrUpdateLessonProgress({
@@ -534,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/my-progress', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const progress = await storage.getLessonProgressByUser(userId);
       res.json(progress);
     } catch (error) {
@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reflection responses
   app.post('/api/reflection-responses', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const responseData = insertReflectionResponseSchema.parse({
         ...req.body,
         userId,
@@ -563,7 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quiz lock routes - to implement site locking during quizzes
   app.get('/api/quiz-lock-status', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const activeLock = await storage.getActiveQuizLock(userId);
       res.json({ isLocked: !!activeLock, activeLock });
     } catch (error) {
@@ -574,7 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/quiz-locks', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const { quizId, timeLimit = 30 } = req.body; // Default 30 minutes
 
       // Check if user already has an active lock
@@ -599,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/quiz-locks', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       await storage.clearQuizLock(userId);
       res.status(200).json({ message: "Quiz lock cleared" });
     } catch (error) {
@@ -610,7 +610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reflection-responses/:lessonId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const lessonId = parseInt(req.params.lessonId);
       
       const responses = await storage.getReflectionResponses(userId, lessonId);
@@ -636,7 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quiz attempts
   app.post('/api/quizzes/:quizId/attempts', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const quizId = parseInt(req.params.quizId);
       
       // Get the quiz to find its lesson
@@ -706,7 +706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Teacher dashboard stats
   app.get('/api/courses/:courseId/stats', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -724,7 +724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/courses/:courseId/student-activity', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -743,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Teacher Class Management Routes
   app.get('/api/teacher/classes', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -760,7 +760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/teacher/classes', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -782,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/teacher/classes/:classId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -805,7 +805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/teacher/classes/:classId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -829,7 +829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/teacher/classes/:classId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -854,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Student Management Routes
   app.get('/api/teacher/classes/:classId/students', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -878,7 +878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/teacher/classes/:classId/students', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -927,7 +927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/teacher/classes/:classId/students/:studentId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -953,7 +953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Teacher Materials Routes
   app.get('/api/teacher/materials', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -976,7 +976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/teacher/materials', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -998,7 +998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/teacher/materials/:materialId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -1021,7 +1021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/teacher/materials/:materialId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -1040,7 +1040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Content Editing Routes for Teachers
   app.put('/api/teacher/quizzes/:quizId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -1063,7 +1063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/teacher/quiz-questions/:questionId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
@@ -1086,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/teacher/reflection-questions/:questionId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.currentUser.id;
       const user = await storage.getUser(userId);
       
       if (user?.role !== 'teacher') {
