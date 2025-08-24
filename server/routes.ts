@@ -782,8 +782,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Convert completedAt string to Date object if present
-      if (updateData.completedAt && typeof updateData.completedAt === 'string') {
-        updateData.completedAt = new Date(updateData.completedAt);
+      if (updateData.completedAt) {
+        if (typeof updateData.completedAt === 'string') {
+          updateData.completedAt = new Date(updateData.completedAt);
+        }
+        // Validate that it's a valid Date object
+        if (!(updateData.completedAt instanceof Date) || isNaN(updateData.completedAt.getTime())) {
+          delete updateData.completedAt; // Remove invalid date
+        }
       }
       
       console.log("Updating quiz attempt with filtered data:", updateData);

@@ -155,7 +155,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
         await apiRequest("PUT", `/api/quiz-attempts/${quizAttemptId}`, {
           score,
           isPassed,
-          completedAt: new Date(),
+          completedAt: new Date().toISOString(),
           timeSpent: Math.round(((quiz.timeLimit || 15) * 60 - timeRemaining) / 60),
         });
         console.log("Quiz attempt updated successfully");
