@@ -7,6 +7,21 @@ import { Home, BookOpen, BarChart3, User } from "lucide-react";
 export default function Header() {
   const { user, isAuthenticated } = useAuth();
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      // Force a full page reload to clear all state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: still redirect to home
+      window.location.href = '/';
+    }
+  };
+
   if (!isAuthenticated || !user) {
     return null;
   }
@@ -52,7 +67,7 @@ export default function Header() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => window.location.href = "/api/logout"}
+              onClick={handleLogout}
               className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               Logout
