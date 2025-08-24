@@ -419,7 +419,7 @@ export default function TeacherDashboard() {
                     <h3 className="font-medium text-blue-900 dark:text-blue-100">Select a Class</h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300">
                       {selectedClassId 
-                        ? `Currently editing content for: ${teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}` 
+                        ? `Currently editing content for: ${teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}` 
                         : "You must select a class before making content changes"
                       }
                     </p>
@@ -431,7 +431,7 @@ export default function TeacherDashboard() {
                       <SelectValue placeholder="Choose a class to modify" />
                     </SelectTrigger>
                     <SelectContent>
-                      {teacherClasses?.data?.map((cls) => (
+                      {teacherClasses?.map((cls) => (
                         <SelectItem key={cls.id} value={cls.id.toString()}>
                           {cls.className}
                         </SelectItem>
@@ -830,7 +830,7 @@ export default function TeacherDashboard() {
                 <h2 className="text-2xl font-bold">Teaching Materials</h2>
                 {selectedClassId && (
                   <p className="text-gray-600 dark:text-gray-400">
-                    Managing materials for: {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
+                    Managing materials for: {teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}
                   </p>
                 )}
               </div>
@@ -957,7 +957,7 @@ export default function TeacherDashboard() {
                 <h2 className="text-2xl font-bold">Content Management</h2>
                 {selectedClassId && (
                   <p className="text-gray-600 dark:text-gray-400">
-                    Editing content for: {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
+                    Editing content for: {teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}
                   </p>
                 )}
               </div>
@@ -1072,7 +1072,7 @@ export default function TeacherDashboard() {
             <DialogHeader>
               <DialogTitle>Edit Quizzes</DialogTitle>
               <DialogDescription>
-                Modify quiz questions and settings for {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
+                Modify quiz questions and settings for {teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}
               </DialogDescription>
             </DialogHeader>
             <QuizEditor classId={selectedClassId} onClose={() => setEditQuizzesDialogOpen(false)} />
@@ -1085,7 +1085,7 @@ export default function TeacherDashboard() {
             <DialogHeader>
               <DialogTitle>Edit Reflection Questions</DialogTitle>
               <DialogDescription>
-                Modify reflection questions for {teacherClasses?.data?.find(c => c.id === selectedClassId)?.className || 'selected class'}
+                Modify reflection questions for {teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}
               </DialogDescription>
             </DialogHeader>
             <ReflectionEditor classId={selectedClassId} onClose={() => setEditReflectionsDialogOpen(false)} />
