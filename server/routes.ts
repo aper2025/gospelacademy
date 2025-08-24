@@ -1702,10 +1702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: reflectionResponses.userId,
           questionId: reflectionResponses.questionId,
           response: reflectionResponses.response,
-          grade: reflectionResponses.grade,
-          feedback: reflectionResponses.feedback,
-          gradedAt: reflectionResponses.gradedAt,
-          createdAt: reflectionResponses.createdAt,
+          submittedAt: reflectionResponses.submittedAt,
           userFirstName: users.firstName,
           userLastName: users.lastName,
           userEmail: users.email,
@@ -1716,7 +1713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(users, eq(reflectionResponses.userId, users.id))
         .leftJoin(reflectionQuestions, eq(reflectionResponses.questionId, reflectionQuestions.id))
         .where(inArray(reflectionResponses.userId, studentIds))
-        .orderBy(desc(reflectionResponses.createdAt));
+        .orderBy(desc(reflectionResponses.submittedAt));
 
       // Transform the data to match the expected interface
       const formattedResponses = responses.map(r => ({
