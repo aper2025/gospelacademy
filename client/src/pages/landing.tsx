@@ -16,21 +16,13 @@ export default function Landing() {
             <p className="mt-6 text-lg leading-8 text-blue-100">
               Discover the teachings and ministry of Jesus Christ through comprehensive biblical study
             </p>
-            <div className="mt-10 flex items-center justify-center gap-x-6">
+            <div className="mt-10 flex items-center justify-center">
               <Button 
                 size="lg"
                 className="bg-white text-primary hover:bg-gray-100 font-semibold px-8 py-3 text-lg"
                 onClick={() => window.location.href = "/auth"}
               >
                 Sign In / Sign Up
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-primary font-semibold px-8 py-3 text-lg"
-                onClick={() => window.location.href = "/api/login"}
-              >
-                Sign in with Replit
               </Button>
             </div>
           </div>

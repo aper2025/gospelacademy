@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./replitAuth";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
 import {
   insertCourseSchema,
   insertUnitSchema,
@@ -22,8 +23,29 @@ import {
 import bcrypt from "bcryptjs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Set up email/password session management
+  app.set("trust proxy", 1);
+  
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const pgStore = connectPg(session);
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: false,
+    ttl: sessionTtl,
+    tableName: "sessions",
+  });
+  
+  app.use(session({
+    secret: process.env.SESSION_SECRET!,
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false, // Set to true in production with HTTPS
+      maxAge: sessionTtl,
+    },
+  }));
 
   // Email/Password Authentication Routes
   app.post('/api/auth/signup', async (req, res) => {
@@ -113,20 +135,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Auth routes
+  // Auth routes - email/password only
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      let userId;
-      
-      // Check if user is authenticated via email/password or OAuth
-      if (req.session?.user) {
-        userId = req.session.user.id;
-      } else if (req.user?.claims?.sub) {
-        userId = req.user.claims.sub;
-      } else {
+      // Check if user is authenticated via email/password session
+      if (!req.session?.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
+      const userId = req.session.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
@@ -139,19 +156,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Custom auth middleware that handles both OAuth and email/password
+  // Auth middleware for email/password only
   const requireAuth = async (req: any, res: any, next: any) => {
-    let userId;
-    
-    // Check if user is authenticated via email/password or OAuth
-    if (req.session?.user) {
-      userId = req.session.user.id;
-    } else if (req.user?.claims?.sub) {
-      userId = req.user.claims.sub;
-    } else {
+    // Check if user is authenticated via email/password session
+    if (!req.session?.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
+    const userId = req.session.user.id;
     const user = await storage.getUser(userId);
     if (!user) {
       return res.status(401).json({ message: "User not found" });
