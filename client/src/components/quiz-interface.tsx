@@ -47,7 +47,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
   const createAttemptMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/quizzes/${quiz.id}/attempts`, {});
-      return response.json();
+      return response;
     },
     onSuccess: (attempt) => {
       setQuizAttemptId(attempt.id);
@@ -76,7 +76,8 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
     mutationFn: async () => {
       if (!quizAttemptId) return;
       await apiRequest("PUT", `/api/quiz-attempts/${quizAttemptId}`, {
-        // Save current progress without completing
+        // Save current progress without completing - just update timestamp
+        updatedAt: new Date().toISOString()
       });
     },
     onSuccess: () => {
