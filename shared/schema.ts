@@ -193,6 +193,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   lessonProgress: many(lessonProgress),
   reflectionResponses: many(reflectionResponses),
   quizAttempts: many(quizAttempts),
+  teacherClasses: many(teacherClasses),
+  teacherClassStudents: many(teacherClassStudents),
+  teacherMaterials: many(teacherMaterials),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -391,6 +394,101 @@ export const insertQuizResponseSchema = createInsertSchema(quizResponses).omit({
   id: true,
 });
 
+// Teacher Classes table - for teacher-student relationships
+export const teacherClasses = pgTable("teacher_classes", {
+  id: serial("id").primaryKey(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  className: varchar("class_name", { length: 255 }).notNull(),
+  description: text("description"),
+  courseId: integer("course_id").references(() => courses.id).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Teacher Class Students table - many-to-many relationship
+export const teacherClassStudents = pgTable("teacher_class_students", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").references(() => teacherClasses.id).notNull(),
+  studentId: varchar("student_id").references(() => users.id).notNull(),
+  enrolledAt: timestamp("enrolled_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+});
+
+// Teacher Materials table - for additional materials added by teachers
+export const teacherMaterials = pgTable("teacher_materials", {
+  id: serial("id").primaryKey(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  classId: integer("class_id").references(() => teacherClasses.id),
+  lessonId: integer("lesson_id").references(() => lessons.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(), // 'link', 'url', 'pdf'
+  content: text("content"), // URL for links, file path for PDFs
+  fileName: varchar("file_name"), // original file name for PDFs
+  isPublic: boolean("is_public").default(false), // visible to all students in class
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for new tables
+export const teacherClassesRelations = relations(teacherClasses, ({ one, many }) => ({
+  teacher: one(users, {
+    fields: [teacherClasses.teacherId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [teacherClasses.courseId],
+    references: [courses.id],
+  }),
+  students: many(teacherClassStudents),
+  materials: many(teacherMaterials),
+}));
+
+export const teacherClassStudentsRelations = relations(teacherClassStudents, ({ one }) => ({
+  class: one(teacherClasses, {
+    fields: [teacherClassStudents.classId],
+    references: [teacherClasses.id],
+  }),
+  student: one(users, {
+    fields: [teacherClassStudents.studentId],
+    references: [users.id],
+  }),
+}));
+
+export const teacherMaterialsRelations = relations(teacherMaterials, ({ one }) => ({
+  teacher: one(users, {
+    fields: [teacherMaterials.teacherId],
+    references: [users.id],
+  }),
+  class: one(teacherClasses, {
+    fields: [teacherMaterials.classId],
+    references: [teacherClasses.id],
+  }),
+  lesson: one(lessons, {
+    fields: [teacherMaterials.lessonId],
+    references: [lessons.id],
+  }),
+}));
+
+// Insert schemas for new tables
+export const insertTeacherClassSchema = createInsertSchema(teacherClasses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTeacherClassStudentSchema = createInsertSchema(teacherClassStudents).omit({
+  id: true,
+  enrolledAt: true,
+});
+
+export const insertTeacherMaterialSchema = createInsertSchema(teacherMaterials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -420,3 +518,9 @@ export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
 export type QuizAttempt = typeof quizAttempts.$inferSelect;
 export type InsertQuizResponse = z.infer<typeof insertQuizResponseSchema>;
 export type QuizResponse = typeof quizResponses.$inferSelect;
+export type InsertTeacherClass = z.infer<typeof insertTeacherClassSchema>;
+export type TeacherClass = typeof teacherClasses.$inferSelect;
+export type InsertTeacherClassStudent = z.infer<typeof insertTeacherClassStudentSchema>;
+export type TeacherClassStudent = typeof teacherClassStudents.$inferSelect;
+export type InsertTeacherMaterial = z.infer<typeof insertTeacherMaterialSchema>;
+export type TeacherMaterial = typeof teacherMaterials.$inferSelect;

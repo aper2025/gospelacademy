@@ -14,6 +14,9 @@ import {
   quizAttempts,
   quizResponses,
   quizLocks,
+  teacherClasses,
+  teacherClassStudents,
+  teacherMaterials,
   type User,
   type UpsertUser,
   type Course,
@@ -42,9 +45,15 @@ import {
   type InsertQuizAttempt,
   type QuizResponse,
   type InsertQuizResponse,
+  type TeacherClass,
+  type InsertTeacherClass,
+  type TeacherClassStudent,
+  type InsertTeacherClassStudent,
+  type TeacherMaterial,
+  type InsertTeacherMaterial,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, sql, count } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -136,6 +145,30 @@ export interface IStorage {
     progress: number;
     status: string;
   }>>;
+
+  // Teacher operations
+  getTeacherClasses(teacherId: string): Promise<TeacherClass[]>;
+  getTeacherClass(id: number): Promise<TeacherClass | undefined>;
+  createTeacherClass(classData: InsertTeacherClass): Promise<TeacherClass>;
+  updateTeacherClass(id: number, classData: Partial<InsertTeacherClass>): Promise<TeacherClass | undefined>;
+  deleteTeacherClass(id: number): Promise<void>;
+
+  // Teacher class students
+  getClassStudents(classId: number): Promise<Array<User & { enrolledAt: Date; isActive: boolean }>>;
+  addStudentToClass(classId: number, studentId: string): Promise<TeacherClassStudent>;
+  removeStudentFromClass(classId: number, studentId: string): Promise<void>;
+  getStudentsByEmail(emails: string[]): Promise<User[]>;
+
+  // Teacher materials
+  getTeacherMaterials(teacherId: string, classId?: number, lessonId?: number): Promise<TeacherMaterial[]>;
+  createTeacherMaterial(materialData: InsertTeacherMaterial): Promise<TeacherMaterial>;
+  updateTeacherMaterial(id: number, materialData: Partial<InsertTeacherMaterial>): Promise<TeacherMaterial | undefined>;
+  deleteTeacherMaterial(id: number): Promise<void>;
+
+  // Content editing for teachers
+  updateQuizAsTeacher(quizId: number, quizData: Partial<InsertQuiz>): Promise<Quiz | undefined>;
+  updateQuizQuestionAsTeacher(questionId: number, questionData: Partial<InsertQuizQuestion>): Promise<QuizQuestion | undefined>;
+  updateReflectionQuestionAsTeacher(questionId: number, questionData: Partial<InsertReflectionQuestion>): Promise<ReflectionQuestion | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -557,6 +590,175 @@ export class DatabaseStorage implements IStorage {
       );
     
     return responses;
+  }
+
+  // Teacher operations
+  async getTeacherClasses(teacherId: string): Promise<TeacherClass[]> {
+    return await db
+      .select()
+      .from(teacherClasses)
+      .where(and(eq(teacherClasses.teacherId, teacherId), eq(teacherClasses.isActive, true)))
+      .orderBy(asc(teacherClasses.className));
+  }
+
+  async getTeacherClass(id: number): Promise<TeacherClass | undefined> {
+    const [teacherClass] = await db
+      .select()
+      .from(teacherClasses)
+      .where(eq(teacherClasses.id, id));
+    return teacherClass;
+  }
+
+  async createTeacherClass(classData: InsertTeacherClass): Promise<TeacherClass> {
+    const [teacherClass] = await db
+      .insert(teacherClasses)
+      .values(classData)
+      .returning();
+    return teacherClass;
+  }
+
+  async updateTeacherClass(id: number, classData: Partial<InsertTeacherClass>): Promise<TeacherClass | undefined> {
+    const [teacherClass] = await db
+      .update(teacherClasses)
+      .set({ ...classData, updatedAt: new Date() })
+      .where(eq(teacherClasses.id, id))
+      .returning();
+    return teacherClass;
+  }
+
+  async deleteTeacherClass(id: number): Promise<void> {
+    await db
+      .update(teacherClasses)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(teacherClasses.id, id));
+  }
+
+  // Teacher class students
+  async getClassStudents(classId: number): Promise<Array<User & { enrolledAt: Date; isActive: boolean }>> {
+    const students = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl,
+        role: users.role,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        enrolledAt: teacherClassStudents.enrolledAt,
+        isActive: teacherClassStudents.isActive,
+      })
+      .from(teacherClassStudents)
+      .innerJoin(users, eq(users.id, teacherClassStudents.studentId))
+      .where(and(
+        eq(teacherClassStudents.classId, classId),
+        eq(teacherClassStudents.isActive, true)
+      ))
+      .orderBy(asc(users.firstName), asc(users.lastName));
+
+    return students.map(student => ({
+      ...student,
+      enrolledAt: student.enrolledAt || new Date(),
+      isActive: student.isActive || false,
+    })) as Array<User & { enrolledAt: Date; isActive: boolean }>;
+  }
+
+  async addStudentToClass(classId: number, studentId: string): Promise<TeacherClassStudent> {
+    const [classStudent] = await db
+      .insert(teacherClassStudents)
+      .values({ classId, studentId })
+      .returning();
+    return classStudent;
+  }
+
+  async removeStudentFromClass(classId: number, studentId: string): Promise<void> {
+    await db
+      .update(teacherClassStudents)
+      .set({ isActive: false })
+      .where(and(
+        eq(teacherClassStudents.classId, classId),
+        eq(teacherClassStudents.studentId, studentId)
+      ));
+  }
+
+  async getStudentsByEmail(emails: string[]): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(
+        inArray(users.email, emails),
+        eq(users.role, 'student')
+      ));
+  }
+
+  // Teacher materials
+  async getTeacherMaterials(teacherId: string, classId?: number, lessonId?: number): Promise<TeacherMaterial[]> {
+    let conditions = [eq(teacherMaterials.teacherId, teacherId)];
+    
+    if (classId) {
+      conditions.push(eq(teacherMaterials.classId, classId));
+    }
+    
+    if (lessonId) {
+      conditions.push(eq(teacherMaterials.lessonId, lessonId));
+    }
+    
+    return await db
+      .select()
+      .from(teacherMaterials)
+      .where(and(...conditions))
+      .orderBy(desc(teacherMaterials.createdAt));
+  }
+
+  async createTeacherMaterial(materialData: InsertTeacherMaterial): Promise<TeacherMaterial> {
+    const [material] = await db
+      .insert(teacherMaterials)
+      .values(materialData)
+      .returning();
+    return material;
+  }
+
+  async updateTeacherMaterial(id: number, materialData: Partial<InsertTeacherMaterial>): Promise<TeacherMaterial | undefined> {
+    const [material] = await db
+      .update(teacherMaterials)
+      .set({ ...materialData, updatedAt: new Date() })
+      .where(eq(teacherMaterials.id, id))
+      .returning();
+    return material;
+  }
+
+  async deleteTeacherMaterial(id: number): Promise<void> {
+    await db
+      .delete(teacherMaterials)
+      .where(eq(teacherMaterials.id, id));
+  }
+
+  // Content editing for teachers
+  async updateQuizAsTeacher(quizId: number, quizData: Partial<InsertQuiz>): Promise<Quiz | undefined> {
+    const [quiz] = await db
+      .update(quizzes)
+      .set(quizData)
+      .where(eq(quizzes.id, quizId))
+      .returning();
+    return quiz;
+  }
+
+  async updateQuizQuestionAsTeacher(questionId: number, questionData: Partial<InsertQuizQuestion>): Promise<QuizQuestion | undefined> {
+    const [question] = await db
+      .update(quizQuestions)
+      .set(questionData)
+      .where(eq(quizQuestions.id, questionId))
+      .returning();
+    return question;
+  }
+
+  async updateReflectionQuestionAsTeacher(questionId: number, questionData: Partial<InsertReflectionQuestion>): Promise<ReflectionQuestion | undefined> {
+    const [question] = await db
+      .update(reflectionQuestions)
+      .set(questionData)
+      .where(eq(reflectionQuestions.id, questionId))
+      .returning();
+    return question;
   }
 }
 
