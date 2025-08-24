@@ -126,6 +126,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logout routes - both GET and POST for different use cases
+  app.get('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.redirect('/?error=logout_failed');
+      }
+      res.redirect('/');
+    });
+  });
+
   app.post('/api/auth/logout', (req, res) => {
     req.session.destroy((err) => {
       if (err) {
