@@ -1647,6 +1647,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get reflection responses by class (for grading)
+  app.get('/api/teacher/reflection-responses/:classId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access reflection responses" });
+      }
+
+      const classId = parseInt(req.params.classId);
+
+      // Verify teacher owns this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, classId),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      // Get students in this class
+      const classStudents = await db
+        .select({
+          userId: classEnrollments.userId,
+        })
+        .from(classEnrollments)
+        .where(eq(classEnrollments.classId, classId));
+
+      if (!classStudents.length) {
+        return res.json([]);
+      }
+
+      const studentIds = classStudents.map(s => s.userId);
+
+      // Get all reflection responses from students in this class
+      const responses = await db
+        .select({
+          id: reflectionResponsesTable.id,
+          userId: reflectionResponsesTable.userId,
+          questionId: reflectionResponsesTable.questionId,
+          response: reflectionResponsesTable.response,
+          grade: reflectionResponsesTable.grade,
+          feedback: reflectionResponsesTable.feedback,
+          gradedAt: reflectionResponsesTable.gradedAt,
+          createdAt: reflectionResponsesTable.createdAt,
+          userFirstName: usersTable.firstName,
+          userLastName: usersTable.lastName,
+          userEmail: usersTable.email,
+          question: reflectionQuestionsTable.questionText,
+          lessonId: reflectionQuestionsTable.lessonId,
+        })
+        .from(reflectionResponsesTable)
+        .leftJoin(usersTable, eq(reflectionResponsesTable.userId, usersTable.id))
+        .leftJoin(reflectionQuestionsTable, eq(reflectionResponsesTable.questionId, reflectionQuestionsTable.id))
+        .where(inArray(reflectionResponsesTable.userId, studentIds))
+        .orderBy(desc(reflectionResponsesTable.createdAt));
+
+      // Transform the data to match the expected interface
+      const formattedResponses = responses.map(r => ({
+        id: r.id,
+        userId: r.userId,
+        questionId: r.questionId,
+        response: r.response,
+        grade: r.grade,
+        feedback: r.feedback,
+        gradedAt: r.gradedAt,
+        createdAt: r.createdAt,
+        user: {
+          firstName: r.userFirstName || '',
+          lastName: r.userLastName || '',
+          email: r.userEmail || '',
+        },
+        question: {
+          question: r.question || '',
+          lessonId: r.lessonId || 0,
+        },
+      }));
+
+      res.json(formattedResponses);
+    } catch (error) {
+      console.error("Error fetching reflection responses for class:", error);
+      res.status(500).json({ message: "Failed to fetch reflection responses" });
+    }
+  });
+
+  // Get quiz questions by class (for setting answers)
+  app.get('/api/teacher/quiz-questions/:classId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can access quiz questions" });
+      }
+
+      const classId = parseInt(req.params.classId);
+
+      // Verify teacher owns this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, classId),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      if (!teacherClass[0].courseId) {
+        return res.json([]);
+      }
+
+      // Get all quiz questions for this class's course
+      const questions = await db
+        .select({
+          id: quizQuestionsTable.id,
+          quizId: quizQuestionsTable.quizId,
+          question: quizQuestionsTable.questionText,
+          optionA: quizQuestionsTable.option1,
+          optionB: quizQuestionsTable.option2,
+          optionC: quizQuestionsTable.option3,
+          optionD: quizQuestionsTable.option4,
+          correctAnswer: quizQuestionsTable.correctAnswer,
+          explanation: quizQuestionsTable.explanation,
+        })
+        .from(quizQuestionsTable)
+        .leftJoin(quizzesTable, eq(quizQuestionsTable.quizId, quizzesTable.id))
+        .leftJoin(lessonsTable, eq(quizzesTable.lessonId, lessonsTable.id))
+        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
+        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
+        .orderBy(quizQuestionsTable.order);
+
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching quiz questions for class:", error);
+      res.status(500).json({ message: "Failed to fetch quiz questions" });
+    }
+  });
+
+  // Grade reflection response
+  app.put('/api/teacher/reflection-responses/:responseId/grade', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can grade responses" });
+      }
+
+      const responseId = parseInt(req.params.responseId);
+      const { grade, feedback } = req.body;
+
+      // Update the reflection response with grade and feedback
+      const [updatedResponse] = await db
+        .update(reflectionResponsesTable)
+        .set({
+          grade: parseInt(grade),
+          feedback: feedback || null,
+          gradedAt: new Date(),
+        })
+        .where(eq(reflectionResponsesTable.id, responseId))
+        .returning();
+
+      if (!updatedResponse) {
+        return res.status(404).json({ message: "Reflection response not found" });
+      }
+
+      res.json(updatedResponse);
+    } catch (error) {
+      console.error("Error grading reflection response:", error);
+      res.status(500).json({ message: "Failed to grade reflection response" });
+    }
+  });
+
+  // Update quiz question answer
+  app.put('/api/teacher/quiz-questions/:questionId/answer', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can update quiz answers" });
+      }
+
+      const questionId = parseInt(req.params.questionId);
+      const { correctAnswer, explanation } = req.body;
+
+      // Update the quiz question with correct answer and explanation
+      const [updatedQuestion] = await db
+        .update(quizQuestionsTable)
+        .set({
+          correctAnswer: correctAnswer,
+          explanation: explanation || null,
+        })
+        .where(eq(quizQuestionsTable.id, questionId))
+        .returning();
+
+      if (!updatedQuestion) {
+        return res.status(404).json({ message: "Quiz question not found" });
+      }
+
+      res.json(updatedQuestion);
+    } catch (error) {
+      console.error("Error updating quiz answer:", error);
+      res.status(500).json({ message: "Failed to update quiz answer" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
