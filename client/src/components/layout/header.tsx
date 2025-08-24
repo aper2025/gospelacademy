@@ -3,21 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "wouter";
 import { Home, BookOpen, BarChart3, User } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Header() {
   const { user, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', {
+      const response = await fetch('/api/logout', {
         method: 'GET',
         credentials: 'include'
       });
-      // Force a full page reload to clear all state
-      window.location.href = '/';
+      
+      if (response.ok) {
+        // Clear all React Query cache
+        queryClient.clear();
+        // Invalidate the auth user query specifically
+        queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        // Force a full page reload to ensure clean state
+        window.location.href = '/';
+      } else {
+        throw new Error('Logout failed');
+      }
     } catch (error) {
       console.error('Logout error:', error);
-      // Fallback: still redirect to home
+      // Clear cache even on error and reload
+      queryClient.clear();
       window.location.href = '/';
     }
   };

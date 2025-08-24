@@ -131,9 +131,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
-        return res.redirect('/?error=logout_failed');
+        return res.status(500).json({ message: "Failed to logout" });
       }
-      res.redirect('/');
+      // Clear the session cookie
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logged out successfully" });
     });
   });
 
