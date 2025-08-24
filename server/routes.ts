@@ -128,22 +128,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Logout routes - both GET and POST for different use cases
   app.get('/api/logout', (req, res) => {
+    // First clear the user from session
+    if (req.session) {
+      req.session.user = null;
+    }
+    
+    // Then destroy the session
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
         return res.status(500).json({ message: "Failed to logout" });
       }
-      // Clear the session cookie
-      res.clearCookie('connect.sid');
+      
+      // Clear the session cookie with all possible options
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: true,
+      });
+      
       res.json({ message: "Logged out successfully" });
     });
   });
 
   app.post('/api/auth/logout', (req, res) => {
+    // First clear the user from session
+    if (req.session) {
+      req.session.user = null;
+    }
+    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Failed to logout" });
       }
+      
+      // Clear the session cookie
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: true,
+      });
+      
       res.json({ message: "Logged out successfully" });
     });
   });
