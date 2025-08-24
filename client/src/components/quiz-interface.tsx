@@ -46,13 +46,20 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
 
   const createAttemptMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/quizzes/${quiz.id}/attempts`, {});
-      return response;
+      // First try to get existing active attempt
+      try {
+        const activeAttempt = await apiRequest("GET", `/api/quizzes/${quiz.id}/active-attempt`);
+        return activeAttempt;
+      } catch (error) {
+        // If no active attempt, create a new one
+        return await apiRequest("POST", `/api/quizzes/${quiz.id}/attempts`, {});
+      }
     },
     onSuccess: (attempt) => {
       setQuizAttemptId(attempt.id);
     },
     onError: (error) => {
+      console.error("Create attempt error:", error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -62,6 +69,15 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
         setTimeout(() => {
           window.location.href = "/api/login";
         }, 500);
+        return;
+      }
+      // Check if error is about existing active session
+      if (error.message?.includes("already have an active")) {
+        toast({
+          title: "Quiz Already Started",
+          description: "You have an active quiz session. Please refresh the page.",
+          variant: "destructive",
+        });
         return;
       }
       toast({
@@ -132,6 +148,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
       });
     },
     onError: (error) => {
+      console.error("Quiz submission error:", error);
       if (isUnauthorizedError(error)) {
         toast({
           title: "Unauthorized",
@@ -145,7 +162,7 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
       }
       toast({
         title: "Error",
-        description: "Failed to submit quiz. Please try again.",
+        description: `Failed to submit quiz: ${error.message || 'Please try again.'}`,
         variant: "destructive",
       });
     },
@@ -153,10 +170,10 @@ export default function QuizInterface({ quiz, questions }: QuizInterfaceProps) {
 
   // Initialize quiz attempt on component mount
   useEffect(() => {
-    if (!quizAttemptId) {
+    if (!quizAttemptId && !createAttemptMutation.isPending) {
       createAttemptMutation.mutate();
     }
-  }, []);
+  }, [quizAttemptId, createAttemptMutation.isPending]);
 
   const handleAnswerChange = (value: string) => {
     setAnswers(prev => ({

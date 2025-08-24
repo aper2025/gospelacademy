@@ -694,6 +694,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quiz attempts
+  app.get('/api/quizzes/:quizId/active-attempt', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const quizId = parseInt(req.params.quizId);
+      
+      // Check if there's an active quiz lock for this user and quiz
+      const activeLock = await storage.getActiveQuizLock(userId);
+      if (activeLock && activeLock.quizId === quizId) {
+        // Get the most recent attempt for this quiz
+        const attempts = await storage.getQuizAttemptsByUser(userId, quizId);
+        const activeAttempt = attempts.find(attempt => !attempt.completedAt);
+        if (activeAttempt) {
+          return res.json(activeAttempt);
+        }
+      }
+      
+      res.status(404).json({ message: "No active attempt found" });
+    } catch (error) {
+      console.error("Error getting active attempt:", error);
+      res.status(500).json({ message: "Failed to get active attempt" });
+    }
+  });
+
   app.post('/api/quizzes/:quizId/attempts', requireAuth, async (req: any, res) => {
     try {
       const userId = req.currentUser.id;
@@ -714,6 +737,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if there's already an active quiz session
       const existingLock = await storage.getActiveQuizLock(userId);
       if (existingLock) {
+        // If it's for the same quiz, return the existing attempt
+        if (existingLock.quizId === quizId) {
+          const attempts = await storage.getQuizAttemptsByUser(userId, quizId);
+          const activeAttempt = attempts.find(attempt => !attempt.completedAt);
+          if (activeAttempt) {
+            return res.json(activeAttempt);
+          }
+        }
         return res.status(400).json({ message: "You already have an active quiz session" });
       }
       
