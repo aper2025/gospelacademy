@@ -8,8 +8,9 @@ import Sidebar from "@/components/layout/sidebar";
 import ProgressWidget from "@/components/progress-widget";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Award, FileText } from "lucide-react";
+import { BookOpen, Clock, Award, FileText, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
+import { ClassAnnouncementsList } from "@/components/ClassAnnouncementsList";
 
 export default function Dashboard() {
   const { toast } = useToast();

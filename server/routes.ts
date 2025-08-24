@@ -27,10 +27,18 @@ import {
   quizAttempts,
   lessons,
   quizzes,
+  users,
+  units,
+  quizQuestions,
+  reflectionQuestions,
+  reflectionResponses,
+  quizResponses,
+  teacherMaterials,
+  classAnnouncements,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, isNotNull, sql, inArray } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up email/password session management
@@ -1676,10 +1684,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get students in this class
       const classStudents = await db
         .select({
-          userId: classEnrollments.userId,
+          userId: teacherClassStudents.studentId,
         })
-        .from(classEnrollments)
-        .where(eq(classEnrollments.classId, classId));
+        .from(teacherClassStudents)
+        .where(eq(teacherClassStudents.classId, classId));
 
       if (!classStudents.length) {
         return res.json([]);
@@ -1690,25 +1698,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all reflection responses from students in this class
       const responses = await db
         .select({
-          id: reflectionResponsesTable.id,
-          userId: reflectionResponsesTable.userId,
-          questionId: reflectionResponsesTable.questionId,
-          response: reflectionResponsesTable.response,
-          grade: reflectionResponsesTable.grade,
-          feedback: reflectionResponsesTable.feedback,
-          gradedAt: reflectionResponsesTable.gradedAt,
-          createdAt: reflectionResponsesTable.createdAt,
-          userFirstName: usersTable.firstName,
-          userLastName: usersTable.lastName,
-          userEmail: usersTable.email,
-          question: reflectionQuestionsTable.questionText,
-          lessonId: reflectionQuestionsTable.lessonId,
+          id: reflectionResponses.id,
+          userId: reflectionResponses.userId,
+          questionId: reflectionResponses.questionId,
+          response: reflectionResponses.response,
+          grade: reflectionResponses.grade,
+          feedback: reflectionResponses.feedback,
+          gradedAt: reflectionResponses.gradedAt,
+          createdAt: reflectionResponses.createdAt,
+          userFirstName: users.firstName,
+          userLastName: users.lastName,
+          userEmail: users.email,
+          question: reflectionQuestions.question,
+          lessonId: reflectionQuestions.lessonId,
         })
-        .from(reflectionResponsesTable)
-        .leftJoin(usersTable, eq(reflectionResponsesTable.userId, usersTable.id))
-        .leftJoin(reflectionQuestionsTable, eq(reflectionResponsesTable.questionId, reflectionQuestionsTable.id))
-        .where(inArray(reflectionResponsesTable.userId, studentIds))
-        .orderBy(desc(reflectionResponsesTable.createdAt));
+        .from(reflectionResponses)
+        .leftJoin(users, eq(reflectionResponses.userId, users.id))
+        .leftJoin(reflectionQuestions, eq(reflectionResponses.questionId, reflectionQuestions.id))
+        .where(inArray(reflectionResponses.userId, studentIds))
+        .orderBy(desc(reflectionResponses.createdAt));
 
       // Transform the data to match the expected interface
       const formattedResponses = responses.map(r => ({
@@ -1771,22 +1779,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all quiz questions for this class's course
       const questions = await db
         .select({
-          id: quizQuestionsTable.id,
-          quizId: quizQuestionsTable.quizId,
-          question: quizQuestionsTable.questionText,
-          optionA: quizQuestionsTable.option1,
-          optionB: quizQuestionsTable.option2,
-          optionC: quizQuestionsTable.option3,
-          optionD: quizQuestionsTable.option4,
-          correctAnswer: quizQuestionsTable.correctAnswer,
-          explanation: quizQuestionsTable.explanation,
+          id: quizQuestions.id,
+          quizId: quizQuestions.quizId,
+          question: quizQuestions.question,
+          optionA: quizQuestions.options,
+          optionB: quizQuestions.options,
+          optionC: quizQuestions.options,
+          optionD: quizQuestions.options,
+          correctAnswer: quizQuestions.correctAnswer,
+          explanation: quizQuestions.explanation,
         })
-        .from(quizQuestionsTable)
-        .leftJoin(quizzesTable, eq(quizQuestionsTable.quizId, quizzesTable.id))
-        .leftJoin(lessonsTable, eq(quizzesTable.lessonId, lessonsTable.id))
-        .leftJoin(unitsTable, eq(lessonsTable.unitId, unitsTable.id))
-        .where(eq(unitsTable.courseId, teacherClass[0].courseId))
-        .orderBy(quizQuestionsTable.order);
+        .from(quizQuestions)
+        .leftJoin(quizzes, eq(quizQuestions.quizId, quizzes.id))
+        .leftJoin(lessons, eq(quizzes.lessonId, lessons.id))
+        .leftJoin(units, eq(lessons.unitId, units.id))
+        .where(eq(units.courseId, teacherClass[0].courseId))
+        .orderBy(quizQuestions.orderIndex);
 
       res.json(questions);
     } catch (error) {
@@ -1810,13 +1818,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update the reflection response with grade and feedback
       const [updatedResponse] = await db
-        .update(reflectionResponsesTable)
+        .update(reflectionResponses)
         .set({
           grade: parseInt(grade),
           feedback: feedback || null,
           gradedAt: new Date(),
         })
-        .where(eq(reflectionResponsesTable.id, responseId))
+        .where(eq(reflectionResponses.id, responseId))
         .returning();
 
       if (!updatedResponse) {
@@ -1845,12 +1853,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update the quiz question with correct answer and explanation
       const [updatedQuestion] = await db
-        .update(quizQuestionsTable)
+        .update(quizQuestions)
         .set({
           correctAnswer: correctAnswer,
           explanation: explanation || null,
         })
-        .where(eq(quizQuestionsTable.id, questionId))
+        .where(eq(quizQuestions.id, questionId))
         .returning();
 
       if (!updatedQuestion) {
@@ -1861,6 +1869,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating quiz answer:", error);
       res.status(500).json({ message: "Failed to update quiz answer" });
+    }
+  });
+
+  // Class Announcements API endpoints
+
+  // Get announcements for a class (students and teachers)
+  app.get('/api/classes/:classId/announcements', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const classId = parseInt(req.params.classId);
+
+      // Check if user has access to this class (either teacher or student)
+      const isTeacher = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, classId),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      const isStudent = await db
+        .select()
+        .from(teacherClassStudents)
+        .where(and(
+          eq(teacherClassStudents.classId, classId),
+          eq(teacherClassStudents.studentId, userId)
+        ))
+        .limit(1);
+
+      if (!isTeacher.length && !isStudent.length) {
+        return res.status(403).json({ message: "Access denied to this class" });
+      }
+
+      // Get announcements for this class
+      const announcements = await db
+        .select({
+          id: classAnnouncements.id,
+          title: classAnnouncements.title,
+          message: classAnnouncements.message,
+          type: classAnnouncements.type,
+          attachmentUrl: classAnnouncements.attachmentUrl,
+          attachmentName: classAnnouncements.attachmentName,
+          linkUrl: classAnnouncements.linkUrl,
+          linkTitle: classAnnouncements.linkTitle,
+          isPinned: classAnnouncements.isPinned,
+          createdAt: classAnnouncements.createdAt,
+          teacherFirstName: users.firstName,
+          teacherLastName: users.lastName,
+        })
+        .from(classAnnouncements)
+        .leftJoin(users, eq(classAnnouncements.teacherId, users.id))
+        .where(eq(classAnnouncements.classId, classId))
+        .orderBy(desc(classAnnouncements.isPinned), desc(classAnnouncements.createdAt));
+
+      const formattedAnnouncements = announcements.map(a => ({
+        id: a.id,
+        title: a.title,
+        message: a.message,
+        type: a.type,
+        attachmentUrl: a.attachmentUrl,
+        attachmentName: a.attachmentName,
+        linkUrl: a.linkUrl,
+        linkTitle: a.linkTitle,
+        isPinned: a.isPinned,
+        createdAt: a.createdAt,
+        teacher: {
+          firstName: a.teacherFirstName || '',
+          lastName: a.teacherLastName || '',
+        },
+      }));
+
+      res.json(formattedAnnouncements);
+    } catch (error) {
+      console.error("Error fetching class announcements:", error);
+      res.status(500).json({ message: "Failed to fetch announcements" });
+    }
+  });
+
+  // Create new announcement (teachers only)
+  app.post('/api/classes/:classId/announcements', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can create announcements" });
+      }
+
+      const classId = parseInt(req.params.classId);
+
+      // Verify teacher owns this class
+      const teacherClass = await db
+        .select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, classId),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!teacherClass.length) {
+        return res.status(404).json({ message: "Class not found" });
+      }
+
+      const { title, message, type, attachmentUrl, attachmentName, linkUrl, linkTitle, isPinned } = req.body;
+
+      if (!title || !message) {
+        return res.status(400).json({ message: "Title and message are required" });
+      }
+
+      // Create the announcement
+      const [announcement] = await db
+        .insert(classAnnouncements)
+        .values({
+          classId: classId,
+          teacherId: userId,
+          title,
+          message,
+          type: type || 'message',
+          attachmentUrl: attachmentUrl || null,
+          attachmentName: attachmentName || null,
+          linkUrl: linkUrl || null,
+          linkTitle: linkTitle || null,
+          isPinned: isPinned || false,
+        })
+        .returning();
+
+      res.status(201).json(announcement);
+    } catch (error) {
+      console.error("Error creating announcement:", error);
+      res.status(500).json({ message: "Failed to create announcement" });
+    }
+  });
+
+  // Update announcement (teachers only)
+  app.put('/api/announcements/:announcementId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can update announcements" });
+      }
+
+      const announcementId = parseInt(req.params.announcementId);
+
+      // Verify teacher owns this announcement
+      const announcement = await db
+        .select()
+        .from(classAnnouncements)
+        .where(and(
+          eq(classAnnouncements.id, announcementId),
+          eq(classAnnouncements.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!announcement.length) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+
+      const { title, message, type, attachmentUrl, attachmentName, linkUrl, linkTitle, isPinned } = req.body;
+
+      // Update the announcement
+      const [updatedAnnouncement] = await db
+        .update(classAnnouncements)
+        .set({
+          title: title || announcement[0].title,
+          message: message || announcement[0].message,
+          type: type || announcement[0].type,
+          attachmentUrl: attachmentUrl !== undefined ? attachmentUrl : announcement[0].attachmentUrl,
+          attachmentName: attachmentName !== undefined ? attachmentName : announcement[0].attachmentName,
+          linkUrl: linkUrl !== undefined ? linkUrl : announcement[0].linkUrl,
+          linkTitle: linkTitle !== undefined ? linkTitle : announcement[0].linkTitle,
+          isPinned: isPinned !== undefined ? isPinned : announcement[0].isPinned,
+          updatedAt: new Date(),
+        })
+        .where(eq(classAnnouncements.id, announcementId))
+        .returning();
+
+      res.json(updatedAnnouncement);
+    } catch (error) {
+      console.error("Error updating announcement:", error);
+      res.status(500).json({ message: "Failed to update announcement" });
+    }
+  });
+
+  // Delete announcement (teachers only)
+  app.delete('/api/announcements/:announcementId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'teacher') {
+        return res.status(403).json({ message: "Only teachers can delete announcements" });
+      }
+
+      const announcementId = parseInt(req.params.announcementId);
+
+      // Verify teacher owns this announcement
+      const announcement = await db
+        .select()
+        .from(classAnnouncements)
+        .where(and(
+          eq(classAnnouncements.id, announcementId),
+          eq(classAnnouncements.teacherId, userId)
+        ))
+        .limit(1);
+
+      if (!announcement.length) {
+        return res.status(404).json({ message: "Announcement not found" });
+      }
+
+      // Delete the announcement
+      await db
+        .delete(classAnnouncements)
+        .where(eq(classAnnouncements.id, announcementId));
+
+      res.json({ message: "Announcement deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting announcement:", error);
+      res.status(500).json({ message: "Failed to delete announcement" });
     }
   });
 

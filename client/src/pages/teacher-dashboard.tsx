@@ -24,8 +24,12 @@ import {
   BookOpen,
   UserPlus,
   CheckCircle,
-  Clock
+  Clock,
+  MessageSquare,
+  MessageCircle
 } from "lucide-react";
+import { ClassChatForm } from "@/components/ClassChatForm";
+import { ClassAnnouncementsList } from "@/components/ClassAnnouncementsList";
 
 interface TeacherClass {
   id: number;
@@ -304,7 +308,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Class Selection Banner */}
-        {(activeTab === "grading" || activeTab === "quizzes") && (
+        {(activeTab === "grading" || activeTab === "quizzes" || activeTab === "chat") && (
           <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -315,7 +319,7 @@ export default function TeacherDashboard() {
                     <p className="text-sm text-blue-700 dark:text-blue-300">
                       {selectedClassId 
                         ? `Currently managing: ${teacherClasses?.find(c => c.id === selectedClassId)?.className || 'selected class'}` 
-                        : "You must select a class to grade assignments"
+                        : activeTab === "chat" ? "You must select a class to post messages" : "You must select a class to grade assignments"
                       }
                     </p>
                   </div>
@@ -349,9 +353,10 @@ export default function TeacherDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="classes" data-testid="tab-classes">Classes</TabsTrigger>
+            <TabsTrigger value="chat" data-testid="tab-chat">Class Chat</TabsTrigger>
             <TabsTrigger value="grading" data-testid="tab-grading">Grade Reflections</TabsTrigger>
             <TabsTrigger value="quizzes" data-testid="tab-quizzes">Quiz Answers</TabsTrigger>
           </TabsList>
@@ -563,6 +568,57 @@ export default function TeacherDashboard() {
                       <p className="text-center text-gray-500 py-4">No students enrolled yet.</p>
                     )}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="chat" className="space-y-6">
+            {/* Class Chat Section */}
+            {selectedClassId ? (
+              <div className="space-y-6">
+                {/* Post New Message Form */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Post New Message
+                    </CardTitle>
+                    <CardDescription>
+                      Send announcements, assignments, or daily messages to your class
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ClassChatForm classId={selectedClassId} onSuccess={() => window.location.reload()} />
+                  </CardContent>
+                </Card>
+
+                {/* Recent Messages */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5" />
+                      Recent Messages
+                    </CardTitle>
+                    <CardDescription>
+                      All announcements and messages for this class
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ClassAnnouncementsList classId={selectedClassId} isTeacher={true} />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    No Class Selected
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    Please select a class from the dropdown above to view and post messages.
+                  </p>
                 </CardContent>
               </Card>
             )}

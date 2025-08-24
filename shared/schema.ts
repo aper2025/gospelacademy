@@ -201,6 +201,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   teacherClasses: many(teacherClasses),
   teacherClassStudents: many(teacherClassStudents),
   teacherMaterials: many(teacherMaterials),
+  classAnnouncements: many(classAnnouncements),
 }));
 
 export const coursesRelations = relations(courses, ({ one, many }) => ({
@@ -399,6 +400,7 @@ export const insertQuizResponseSchema = createInsertSchema(quizResponses).omit({
   id: true,
 });
 
+
 // Teacher Classes table - for teacher-student relationships
 export const teacherClasses = pgTable("teacher_classes", {
   id: serial("id").primaryKey(),
@@ -418,6 +420,23 @@ export const teacherClassStudents = pgTable("teacher_class_students", {
   studentId: varchar("student_id").references(() => users.id).notNull(),
   enrolledAt: timestamp("enrolled_at").defaultNow(),
   isActive: boolean("is_active").default(true),
+});
+
+// Class Announcements table for teacher chat/messages
+export const classAnnouncements = pgTable("class_announcements", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").references(() => teacherClasses.id).notNull(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }).default("message"), // "message", "assignment", "announcement"
+  attachmentUrl: varchar("attachment_url", { length: 500 }),
+  attachmentName: varchar("attachment_name", { length: 255 }),
+  linkUrl: varchar("link_url", { length: 500 }),
+  linkTitle: varchar("link_title", { length: 255 }),
+  isPinned: boolean("is_pinned").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Teacher Materials table - for additional materials added by teachers
@@ -447,6 +466,7 @@ export const teacherClassesRelations = relations(teacherClasses, ({ one, many })
     references: [courses.id],
   }),
   students: many(teacherClassStudents),
+  announcements: many(classAnnouncements),
   materials: many(teacherMaterials),
 }));
 
@@ -457,6 +477,17 @@ export const teacherClassStudentsRelations = relations(teacherClassStudents, ({ 
   }),
   student: one(users, {
     fields: [teacherClassStudents.studentId],
+    references: [users.id],
+  }),
+}));
+
+export const classAnnouncementsRelations = relations(classAnnouncements, ({ one }) => ({
+  class: one(teacherClasses, {
+    fields: [classAnnouncements.classId],
+    references: [teacherClasses.id],
+  }),
+  teacher: one(users, {
+    fields: [classAnnouncements.teacherId],
     references: [users.id],
   }),
 }));
@@ -523,6 +554,15 @@ export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
 export type QuizAttempt = typeof quizAttempts.$inferSelect;
 export type InsertQuizResponse = z.infer<typeof insertQuizResponseSchema>;
 export type QuizResponse = typeof quizResponses.$inferSelect;
+
+export const insertClassAnnouncementSchema = createInsertSchema(classAnnouncements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type ClassAnnouncement = typeof classAnnouncements.$inferSelect;
+export type InsertClassAnnouncement = z.infer<typeof insertClassAnnouncementSchema>;
 export type InsertTeacherClass = z.infer<typeof insertTeacherClassSchema>;
 export type TeacherClass = typeof teacherClasses.$inferSelect;
 export type InsertTeacherClassStudent = z.infer<typeof insertTeacherClassStudentSchema>;
