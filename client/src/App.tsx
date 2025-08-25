@@ -12,6 +12,8 @@ import Unit from "@/pages/unit";
 import Lesson from "@/pages/lesson";
 import Quiz from "@/pages/quiz";
 import TeacherDashboard from "@/pages/teacher-dashboard";
+import SimpleTeacherDashboard from "@/pages/simple-teacher-dashboard";
+import SimpleStudentDashboard from "@/pages/simple-student-dashboard";
 import Textbook from "@/pages/textbook";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
@@ -37,6 +39,8 @@ function Router() {
           <Route path="/lessons/:id" component={Lesson} />
           <Route path="/quiz/:id" component={Quiz} />
           <Route path="/teacher" component={TeacherDashboard} />
+          <Route path="/simple-teacher" component={SimpleTeacherDashboard} />
+          <Route path="/simple-student" component={SimpleStudentDashboard} />
           <Route path="/textbook" component={Textbook} />
         </>
       )}

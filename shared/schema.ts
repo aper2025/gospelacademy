@@ -586,3 +586,66 @@ export const loginSchema = z.object({
 
 export type SignupData = z.infer<typeof signupSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
+
+// ========= NEW SIMPLE TEACHER-STUDENT SYSTEM =========
+
+// Simple Teacher-Student Links 
+export const teacherStudentLinks = pgTable("teacher_student_links", {
+  id: serial("id").primaryKey(),
+  teacherId: varchar("teacher_id").references(() => users.id).notNull(),
+  studentId: varchar("student_id").references(() => users.id).notNull(),
+  linkedAt: timestamp("linked_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+});
+
+// Simple Messages 
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  recipientId: varchar("recipient_id").references(() => users.id).notNull(),
+  title: varchar("title", { length: 255 }),
+  message: text("message").notNull(),
+  type: varchar("type", { length: 50 }).default("general"), // general, announcement, assignment
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// New Relations
+export const teacherStudentLinksRelations = relations(teacherStudentLinks, ({ one }) => ({
+  teacher: one(users, {
+    fields: [teacherStudentLinks.teacherId],
+    references: [users.id],
+  }),
+  student: one(users, {
+    fields: [teacherStudentLinks.studentId],
+    references: [users.id],
+  }),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  sender: one(users, {
+    fields: [messages.senderId],
+    references: [users.id],
+  }),
+  recipient: one(users, {
+    fields: [messages.recipientId],
+    references: [users.id],
+  }),
+}));
+
+// New Insert Schemas
+export const insertTeacherStudentLinkSchema = createInsertSchema(teacherStudentLinks).omit({
+  id: true,
+  linkedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+// New Type exports
+export type TeacherStudentLink = typeof teacherStudentLinks.$inferSelect;
+export type InsertTeacherStudentLink = z.infer<typeof insertTeacherStudentLinkSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
