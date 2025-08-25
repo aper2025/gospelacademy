@@ -548,8 +548,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/my-enrollments', requireAuth, async (req: any, res) => {
     try {
       const userId = req.currentUser.id;
-      const enrollments = await storage.getCourseEnrollmentsByUser(userId);
-      res.json(enrollments);
+      
+      // Get class enrollments (for students to see class announcements)
+      const classEnrollments = await db.select({
+        classId: teacherClasses.id,
+        className: teacherClasses.className,
+        courseId: teacherClasses.courseId,
+        courseName: courses.title,
+        teacherName: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`,
+        enrolledAt: teacherClassStudents.enrolledAt,
+      })
+      .from(teacherClassStudents)
+      .innerJoin(teacherClasses, eq(teacherClassStudents.classId, teacherClasses.id))
+      .innerJoin(courses, eq(teacherClasses.courseId, courses.id))
+      .innerJoin(users, eq(teacherClasses.teacherId, users.id))
+      .where(and(
+        eq(teacherClassStudents.studentId, userId),
+        eq(teacherClassStudents.isActive, true)
+      ));
+
+      res.json(classEnrollments);
     } catch (error) {
       console.error("Error fetching enrollments:", error);
       res.status(500).json({ message: "Failed to fetch enrollments" });
