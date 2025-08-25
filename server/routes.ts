@@ -38,7 +38,7 @@ import {
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, sql, inArray, ilike } from "drizzle-orm";
+import { eq, and, desc, isNotNull, sql, inArray, ilike, ne } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up email/password session management
@@ -716,6 +716,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching lesson quiz:", error);
       res.status(500).json({ message: "Failed to fetch lesson quiz" });
+    }
+  });
+
+  // Check if user can access final assessment
+  app.get('/api/final-assessment/access', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      
+      // Get all lessons except lesson 17 (final assessment lesson)
+      const allLessons = await db.select({
+        id: lessons.id,
+        title: lessons.title,
+        unitId: lessons.unitId
+      })
+      .from(lessons)
+      .where(and(
+        inArray(lessons.unitId, [1, 2, 3]),
+        ne(lessons.id, 17)
+      ))
+      .orderBy(lessons.unitId, lessons.orderIndex);
+
+      // Get completed lessons for this user
+      const completedLessons = await db.select({
+        lessonId: lessonProgress.lessonId
+      })
+      .from(lessonProgress)
+      .where(and(
+        eq(lessonProgress.userId, userId),
+        eq(lessonProgress.isCompleted, true)
+      ));
+
+      const completedLessonIds = new Set(completedLessons.map(cl => cl.lessonId));
+      const totalLessons = allLessons.length;
+      const completedCount = allLessons.filter(lesson => completedLessonIds.has(lesson.id)).length;
+      
+      const canAccess = completedCount === totalLessons;
+      
+      res.json({
+        canAccess,
+        totalLessons,
+        completedLessons: completedCount,
+        remainingLessons: allLessons.filter(lesson => !completedLessonIds.has(lesson.id))
+      });
+    } catch (error) {
+      console.error("Error checking final assessment access:", error);
+      res.status(500).json({ message: "Failed to check assessment access" });
     }
   });
 

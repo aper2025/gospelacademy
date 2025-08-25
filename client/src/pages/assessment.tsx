@@ -29,10 +29,16 @@ export default function Assessment() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  // Get final tests (lesson 17 quizzes)
+  // Check if user can access final assessment
+  const { data: accessData, isLoading: accessLoading } = useQuery<any>({
+    queryKey: ["/api/final-assessment/access"],
+    enabled: isAuthenticated,
+  });
+
+  // Get final tests (lesson 17 quizzes) - only if access is granted
   const { data: finalTests, isLoading: testsLoading } = useQuery<any[]>({
     queryKey: ["/api/lessons/17/quizzes"],
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && accessData?.canAccess,
   });
 
   // Get lesson 17 details
@@ -41,7 +47,7 @@ export default function Assessment() {
     enabled: isAuthenticated,
   });
 
-  if (isLoading || testsLoading) {
+  if (isLoading || accessLoading || testsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div>Loading assessment...</div>
@@ -104,7 +110,57 @@ export default function Assessment() {
                   Final Tests
                 </h2>
                 
-                {finalTests && finalTests.length > 0 ? (
+                {!accessData?.canAccess ? (
+                  <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-3 text-red-800 dark:text-red-200">
+                        <div className="p-2 rounded-full bg-red-100 dark:bg-red-900">
+                          <Trophy className="h-6 w-6 text-red-600 dark:text-red-400" />
+                        </div>
+                        <span>Final Assessment Locked</span>
+                      </CardTitle>
+                      <CardDescription className="text-red-700 dark:text-red-300">
+                        Complete all course lessons to unlock the final assessment
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">Progress:</span>
+                          <span className="text-sm text-red-600 dark:text-red-400">
+                            {accessData?.completedLessons || 0} of {accessData?.totalLessons || 0} lessons completed
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-red-500 h-2 rounded-full transition-all duration-300" 
+                            style={{ width: `${((accessData?.completedLessons || 0) / (accessData?.totalLessons || 1)) * 100}%` }}
+                          />
+                        </div>
+                        {accessData?.remainingLessons && accessData.remainingLessons.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                              Remaining lessons to complete:
+                            </p>
+                            <ul className="space-y-1 text-sm text-red-700 dark:text-red-300">
+                              {accessData.remainingLessons.slice(0, 5).map((lesson: any) => (
+                                <li key={lesson.id} className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                                  <span>{lesson.title}</span>
+                                </li>
+                              ))}
+                              {accessData.remainingLessons.length > 5 && (
+                                <li className="text-red-600 dark:text-red-400 italic">
+                                  ...and {accessData.remainingLessons.length - 5} more lessons
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : finalTests && finalTests.length > 0 ? (
                   <div className="grid gap-6 md:grid-cols-2">
                     {finalTests.map((test, index) => (
                       <Card key={test.id} className="card-shadow hover:shadow-card-hover transition-all duration-300">
@@ -156,22 +212,41 @@ export default function Assessment() {
               </div>
 
               {/* Instructions */}
-              <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
-                <CardHeader>
-                  <CardTitle className="text-yellow-800 dark:text-yellow-200">
-                    Assessment Instructions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-yellow-700 dark:text-yellow-300">
-                  <ul className="space-y-2 list-disc list-inside">
-                    <li>Complete Day 1 test before proceeding to Day 2</li>
-                    <li>Each test covers comprehensive material from the entire course</li>
-                    <li>You need {finalTests?.[0]?.passingScore || 80}% or higher to pass</li>
-                    <li>Tests are timed - manage your time carefully</li>
-                    <li>Review your course materials before starting</li>
-                  </ul>
-                </CardContent>
-              </Card>
+              {accessData?.canAccess ? (
+                <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+                  <CardHeader>
+                    <CardTitle className="text-yellow-800 dark:text-yellow-200">
+                      Assessment Instructions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-yellow-700 dark:text-yellow-300">
+                    <ul className="space-y-2 list-disc list-inside">
+                      <li>Complete Day 1 test before proceeding to Day 2</li>
+                      <li>Each test covers comprehensive material from the entire course</li>
+                      <li>You need {finalTests?.[0]?.passingScore || 80}% or higher to pass</li>
+                      <li>Tests are timed - manage your time carefully</li>
+                      <li>Review your course materials before starting</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <CardHeader>
+                    <CardTitle className="text-blue-800 dark:text-blue-200">
+                      How to Unlock Final Assessment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-blue-700 dark:text-blue-300">
+                    <ul className="space-y-2 list-disc list-inside">
+                      <li>Complete all lessons in Units 1, 2, and 3</li>
+                      <li>Finish all reflection questions for each lesson</li>
+                      <li>Pass all individual lesson quizzes</li>
+                      <li>Once complete, return here to access the final tests</li>
+                      <li>The final assessment consists of two comprehensive tests</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </main>
         </div>
