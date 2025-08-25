@@ -255,6 +255,37 @@ export default function TeacherDashboard() {
     },
   });
 
+  const removeStudentMutation = useMutation({
+    mutationFn: async ({ classId, studentId }: { classId: number; studentId: string }) => {
+      return await apiRequest('DELETE', `/api/teacher/classes/${classId}/students/${studentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes", selectedClassId, "students"] });
+      toast({
+        title: "Success",
+        description: "Student removed from class successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to remove student. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -559,9 +590,24 @@ export default function TeacherDashboard() {
                           <p className="font-medium">{student.firstName} {student.lastName}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">{student.email}</p>
                         </div>
-                        <Badge variant={student.isActive ? "default" : "secondary"}>
-                          {student.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={student.isActive ? "default" : "secondary"}>
+                            {student.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to remove ${student.firstName} ${student.lastName} from this class?`)) {
+                                removeStudentMutation.mutate({ classId: selectedClassId!, studentId: student.id });
+                              }
+                            }}
+                            disabled={removeStudentMutation.isPending}
+                            data-testid={`button-remove-student-${student.id}`}
+                          >
+                            Remove
+                          </Button>
+                        </div>
                       </div>
                     )) || (
                       <p className="text-center text-gray-500 py-4">No students enrolled yet.</p>
