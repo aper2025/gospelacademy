@@ -719,6 +719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   // Check if user can access final assessment
   app.get('/api/final-assessment/access', requireAuth, async (req: any, res) => {
     try {
@@ -1843,19 +1844,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: quizQuestions.id,
           quizId: quizQuestions.quizId,
           question: quizQuestions.question,
-          optionA: quizQuestions.options,
-          optionB: quizQuestions.options,
-          optionC: quizQuestions.options,
-          optionD: quizQuestions.options,
+          optionA: quizQuestions.optionA,
+          optionB: quizQuestions.optionB,
+          optionC: quizQuestions.optionC,
+          optionD: quizQuestions.optionD,
           correctAnswer: quizQuestions.correctAnswer,
           explanation: quizQuestions.explanation,
+          quizTitle: quizzes.title,
+          lessonTitle: lessons.title,
         })
         .from(quizQuestions)
         .leftJoin(quizzes, eq(quizQuestions.quizId, quizzes.id))
         .leftJoin(lessons, eq(quizzes.lessonId, lessons.id))
         .leftJoin(units, eq(lessons.unitId, units.id))
         .where(eq(units.courseId, teacherClass[0].courseId))
-        .orderBy(quizQuestions.orderIndex);
+        .orderBy(quizzes.lessonId, quizQuestions.orderIndex);
 
       res.json(questions);
     } catch (error) {

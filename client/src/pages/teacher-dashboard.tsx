@@ -671,7 +671,7 @@ export default function TeacherDashboard() {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Manage Quiz Answers</h2>
                 <div className="space-y-4">
-                  {quizQuestions?.map((question) => (
+                  {quizQuestions?.map((question: QuizQuestion) => (
                     <QuizAnswerCard
                       key={question.id}
                       question={question}
