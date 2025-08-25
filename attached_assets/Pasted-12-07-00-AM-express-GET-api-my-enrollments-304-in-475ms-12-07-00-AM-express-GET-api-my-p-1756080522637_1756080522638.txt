@@ -1,0 +1,64 @@
+12:07:00 AM [express] GET /api/my-enrollments 304 in 475ms :: []
+12:07:00 AM [express] GET /api/my-progress 200 in 473ms :: []
+12:07:00 AM [express] GET /api/my-enrolled-courses 500 in 475ms :: {"message":"Failed to fetch enroll…
+12:07:00 AM [express] GET /api/courses/1/my-progress-stats 200 in 513ms :: {"lessonsCompleted":0,"tot…
+12:07:00 AM [express] GET /api/courses/1/my-recent-activity 500 in 535ms :: {"message":"Failed to fet…
+12:07:00 AM [express] GET /api/courses/1/overview 304 in 597ms :: {"totalLessons":7,"totalUnits":3,"t…
+12:07:00 AM [express] GET /api/quiz-lock-status 304 in 256ms :: {"isLocked":false}
+12:07:03 AM [express] GET /api/teacher/classes 304 in 327ms :: [{"id":4,"teacherId":"77c038b0-80af-4d…
+12:07:03 AM [express] GET /api/courses/1/stats 304 in 390ms :: {"totalEnrollments":1,"averageProgress…
+12:07:06 AM [express] GET /api/quiz-lock-status 304 in 257ms :: {"isLocked":false}
+12:07:11 AM [express] GET /api/quiz-lock-status 304 in 262ms :: {"isLocked":false}
+Error fetching enrolled courses: TypeError: Cannot convert undefined or null to object
+    at Function.entries (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:16)
+    at <anonymous> (/home/runner/workspace/node_modules/src/utils.ts:88:19)
+    at Array.reduce (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:32)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:979:23)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at PgSelectBase._prepare (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:978:17)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:1009:16)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at PgSelectBase.execute (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:1008:17)
+    at PgSelectBase.then (/home/runner/workspace/node_modules/src/query-promise.ts:31:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+12:07:16 AM [express] GET /api/my-enrolled-courses 500 in 255ms :: {"message":"Failed to fetch enroll…
+Error fetching recent activity: TypeError: Cannot convert undefined or null to object
+    at Function.entries (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:16)
+    at <anonymous> (/home/runner/workspace/node_modules/src/utils.ts:88:19)
+    at Array.reduce (<anonymous>)
+    at orderSelectedFields (/home/runner/workspace/node_modules/src/utils.ts:77:32)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:979:23)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at PgSelectBase._prepare (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:978:17)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:1009:16)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at PgSelectBase.execute (/home/runner/workspace/node_modules/src/pg-core/query-builders/select.ts:1008:17)
+    at PgSelectBase.then (/home/runner/workspace/node_modules/src/query-promise.ts:31:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+12:07:17 AM [express] GET /api/courses/1/my-recent-activity 500 in 716ms :: {"message":"Failed to fet…
+12:07:17 AM [express] GET /api/quiz-lock-status 304 in 647ms :: {"isLocked":false}
+12:07:22 AM [express] GET /api/quiz-lock-status 304 in 257ms :: {"isLocked":false}
+12:07:28 AM [express] GET /api/quiz-lock-status 304 in 259ms :: {"isLocked":false}
+12:07:33 AM [express] GET /api/quiz-lock-status 304 in 258ms :: {"isLocked":false}
+12:07:38 AM [express] GET /api/quiz-lock-status 304 in 265ms :: {"isLocked":false}
+12:07:44 AM [express] GET /api/quiz-lock-status 304 in 259ms :: {"isLocked":false}
+12:07:49 AM [express] GET /api/quiz-lock-status 304 in 258ms :: {"isLocked":false}
+12:07:54 AM [express] GET /api/quiz-lock-status 304 in 258ms :: {"isLocked":false}
+12:08:00 AM [express] GET /api/quiz-lock-status 304 in 259ms :: {"isLocked":false}
+12:08:05 AM [express] GET /api/quiz-lock-status 304 in 259ms :: {"isLocked":false}
+12:08:10 AM [express] GET /api/quiz-lock-status 304 in 259ms :: {"isLocked":false}
+12:08:15 AM [express] GET /api/classes/6/announcements 200 in 393ms :: [{"id":3,"title":"hi","message…
+12:08:16 AM [express] GET /api/teacher/reflection-responses/6 304 in 856ms :: [{"id":28,"userId":"1a4…
+12:08:16 AM [express] GET /api/teacher/classes/6/students 304 in 1006ms :: [{"id":"1a4b2c50-830a-4064…
+12:08:16 AM [express] GET /api/quiz-lock-status 304 in 457ms :: {"isLocked":false}
+12:08:16 AM [express] GET /api/teacher/quiz-questions/6 304 in 1234ms :: [{"id":353,"quizId":20,"ques…
+12:08:21 AM [express] GET /api/quiz-lock-status 304 in 261ms :: {"isLocked":false}
+12:08:27 AM [express] POST /api/classes/6/announcements 201 in 394ms :: {"id":4,"classId":6,"teacherI…
+12:08:27 AM [express] GET /api/quiz-lock-status 304 in 455ms :: {"isLocked":false}
+12:08:31 AM [express] GET /api/auth/user 304 in 191ms :: {"id":"77c038b0-80af-4db0-bc31-aced0ce93326"…
+12:08:31 AM [express] GET /api/teacher/classes 304 in 321ms :: [{"id":4,"teacherId":"77c038b0-80af-4d…
+12:08:31 AM [express] GET /api/courses/1/stats 304 in 385ms :: {"totalEnrollments":1,"averageProgress…
+12:08:31 AM [express] GET /api/quiz-lock-status 304 in 463ms :: {"isLocked":false}

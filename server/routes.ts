@@ -1134,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalLessons: courses.totalLessons,
           totalQuizzes: courses.totalQuizzes,
           estimatedDuration: courses.estimatedDuration,
-          className: teacherClasses.className,
+          className: sql<string>`COALESCE(${teacherClasses.className}, 'Independent Study')`,
         })
         .from(courseEnrollments)
         .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
@@ -1180,7 +1180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: courses.title,
         progress: courseEnrollments.progress,
         isCompleted: courseEnrollments.completedAt,
-        className: teacherClasses.className,
+        className: sql<string>`COALESCE(${teacherClasses.className}, 'Independent Study')`,
       })
       .from(courseEnrollments)
       .innerJoin(courses, eq(courseEnrollments.courseId, courses.id))
@@ -1225,7 +1225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get recent lesson completions
       const recentLessons = await db.select({
         type: sql<string>`'lesson'`,
-        title: lessons.title,
+        title: sql<string>`COALESCE(${lessons.title}, 'Untitled Lesson')`,
         timestamp: lessonProgress.completedAt,
         status: sql<string>`'completed'`,
       })
@@ -1242,10 +1242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get recent quiz attempts
       const recentQuizzes = await db.select({
         type: sql<string>`'quiz'`,
-        title: quizzes.title,
+        title: sql<string>`COALESCE(${quizzes.title}, 'Untitled Quiz')`,
         timestamp: quizAttempts.completedAt,
         status: sql<string>`CASE WHEN ${quizAttempts.isPassed} THEN 'passed' ELSE 'failed' END`,
-        score: quizAttempts.score,
+        score: sql<number>`COALESCE(${quizAttempts.score}, 0)`,
       })
       .from(quizAttempts)
       .innerJoin(quizzes, eq(quizAttempts.quizId, quizzes.id))
