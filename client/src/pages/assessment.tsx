@@ -41,11 +41,6 @@ export default function Assessment() {
     enabled: isAuthenticated && accessData?.canAccess,
   });
 
-  // Get lesson 17 details
-  const { data: lesson } = useQuery<any>({
-    queryKey: ["/api/lessons/17"],
-    enabled: isAuthenticated,
-  });
 
   if (isLoading || accessLoading || testsLoading) {
     return (
@@ -89,20 +84,6 @@ export default function Assessment() {
                 </p>
               </div>
 
-              {/* Course Overview Card */}
-              {lesson && (
-                <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <FileText className="h-6 w-6 text-blue-600" />
-                      <span>{lesson.title}</span>
-                    </CardTitle>
-                    <CardDescription className="text-lg">
-                      {lesson.content?.split('\n')[0] || 'Complete your study with these final assessments'}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              )}
 
               {/* Final Tests Grid */}
               <div className="grid gap-6">
