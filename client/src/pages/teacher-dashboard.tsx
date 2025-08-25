@@ -70,17 +70,6 @@ interface ReflectionResponse {
   };
 }
 
-interface QuizQuestion {
-  id: number;
-  quizId: number;
-  question: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  correctAnswer: string;
-  explanation: string;
-}
 
 export default function TeacherDashboard() {
   const { toast } = useToast();
@@ -133,10 +122,6 @@ export default function TeacherDashboard() {
     enabled: isAuthenticated && user?.role === 'teacher' && selectedClassId !== null,
   });
 
-  const { data: quizQuestions } = useQuery<QuizQuestion[]>({
-    queryKey: ["/api/teacher/quiz-questions", selectedClassId],
-    enabled: isAuthenticated && user?.role === 'teacher' && selectedClassId !== null,
-  });
 
   // Mutations
   const createClassMutation = useMutation({
@@ -237,36 +222,6 @@ export default function TeacherDashboard() {
     },
   });
 
-  const updateQuizAnswerMutation = useMutation({
-    mutationFn: async ({ questionId, correctAnswer, explanation }: { questionId: number; correctAnswer: string; explanation: string }) => {
-      return await apiRequest('PUT', `/api/teacher/quiz-questions/${questionId}/answer`, { correctAnswer, explanation });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teacher/quiz-questions", selectedClassId] });
-      toast({
-        title: "Success",
-        description: "Quiz answer updated successfully",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to update quiz answer. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const deleteClassMutation = useMutation({
     mutationFn: async (classId: number) => {
@@ -340,7 +295,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Class Selection Banner */}
-        {(activeTab === "grading" || activeTab === "quizzes" || activeTab === "chat") && (
+        {(activeTab === "grading" || activeTab === "chat") && (
           <Card className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -385,12 +340,11 @@ export default function TeacherDashboard() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
             <TabsTrigger value="classes" data-testid="tab-classes">Classes</TabsTrigger>
             <TabsTrigger value="chat" data-testid="tab-chat">Class Chat</TabsTrigger>
             <TabsTrigger value="grading" data-testid="tab-grading">Grade Reflections</TabsTrigger>
-            <TabsTrigger value="quizzes" data-testid="tab-quizzes">Quiz Answers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -701,37 +655,6 @@ export default function TeacherDashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="quizzes" className="space-y-6">
-            {!selectedClassId ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Select a Class</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    Choose a class above to manage quiz answers
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Manage Quiz Answers</h2>
-                <div className="space-y-4">
-                  {quizQuestions?.map((question: QuizQuestion) => (
-                    <QuizAnswerCard
-                      key={question.id}
-                      question={question}
-                      onUpdateAnswer={(correctAnswer, explanation) => 
-                        updateQuizAnswerMutation.mutate({ questionId: question.id, correctAnswer, explanation })
-                      }
-                      isUpdating={updateQuizAnswerMutation.isPending}
-                    />
-                  )) || (
-                    <p className="text-center text-gray-500 py-8">No quiz questions found.</p>
-                  )}
-                </div>
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -818,94 +741,3 @@ function ReflectionGradeCard({
   );
 }
 
-// Quiz Answer Management Component
-function QuizAnswerCard({ 
-  question, 
-  onUpdateAnswer, 
-  isUpdating 
-}: { 
-  question: QuizQuestion; 
-  onUpdateAnswer: (correctAnswer: string, explanation: string) => void;
-  isUpdating: boolean;
-}) {
-  const [correctAnswer, setCorrectAnswer] = useState(question.correctAnswer || "");
-  const [explanation, setExplanation] = useState(question.explanation || "");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!correctAnswer) return;
-    onUpdateAnswer(correctAnswer, explanation);
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Quiz Question</span>
-          <Badge variant={question.correctAnswer ? "default" : "secondary"}>
-            {question.correctAnswer ? (
-              <><CheckCircle className="h-3 w-3 mr-1" />Answer Set</>
-            ) : (
-              <><Clock className="h-3 w-3 mr-1" />Needs Answer</>
-            )}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div>
-            <Label>Question:</Label>
-            <p className="mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">{question.question}</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>A) {question.optionA}</Label>
-            </div>
-            <div>
-              <Label>B) {question.optionB}</Label>
-            </div>
-            <div>
-              <Label>C) {question.optionC}</Label>
-            </div>
-            <div>
-              <Label>D) {question.optionD}</Label>
-            </div>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor={`correct-${question.id}`}>Correct Answer</Label>
-              <Select value={correctAnswer} onValueChange={setCorrectAnswer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select correct answer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="a">A) {question.optionA}</SelectItem>
-                  <SelectItem value="b">B) {question.optionB}</SelectItem>
-                  <SelectItem value="c">C) {question.optionC}</SelectItem>
-                  <SelectItem value="d">D) {question.optionD}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor={`explanation-${question.id}`}>Explanation (Optional)</Label>
-              <Textarea
-                id={`explanation-${question.id}`}
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                placeholder="Explain why this is the correct answer..."
-                rows={3}
-              />
-            </div>
-            
-            <Button type="submit" disabled={isUpdating || !correctAnswer}>
-              {isUpdating ? "Updating..." : "Update Answer"}
-            </Button>
-          </form>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

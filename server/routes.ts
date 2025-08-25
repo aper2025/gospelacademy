@@ -1839,69 +1839,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get quiz questions by class (for setting answers)
-  app.get('/api/teacher/quiz-questions/:classId', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.currentUser.id;
-      const user = await storage.getUser(userId);
-      
-      if (user?.role !== 'teacher') {
-        return res.status(403).json({ message: "Only teachers can access quiz questions" });
-      }
-
-      const classId = parseInt(req.params.classId);
-
-      // Verify teacher owns this class
-      const teacherClass = await db
-        .select()
-        .from(teacherClasses)
-        .where(and(
-          eq(teacherClasses.id, classId),
-          eq(teacherClasses.teacherId, userId)
-        ))
-        .limit(1);
-
-      if (!teacherClass.length) {
-        return res.status(404).json({ message: "Class not found" });
-      }
-
-      if (!teacherClass[0].courseId) {
-        return res.json([]);
-      }
-
-      // Get all quiz questions for this class's course
-      const rawQuestions = await db
-        .select({
-          id: quizQuestions.id,
-          quizId: quizQuestions.quizId,
-          question: quizQuestions.question,
-          options: quizQuestions.options,
-          correctAnswer: quizQuestions.correctAnswer,
-          explanation: quizQuestions.explanation,
-          quizTitle: quizzes.title,
-          lessonTitle: lessons.title,
-        })
-        .from(quizQuestions)
-        .leftJoin(quizzes, eq(quizQuestions.quizId, quizzes.id))
-        .leftJoin(lessons, eq(quizzes.lessonId, lessons.id))
-        .leftJoin(units, eq(lessons.unitId, units.id))
-        .where(eq(units.courseId, teacherClass[0].courseId))
-        .orderBy(quizzes.lessonId, quizQuestions.orderIndex);
-
-      // Transform the questions to extract individual options
-      const questions = rawQuestions.map(q => ({
-        ...q,
-        optionA: q.options?.a || '',
-        optionB: q.options?.b || '',
-        optionC: q.options?.c || '',
-        optionD: q.options?.d || '',
-      }));
-
-      res.json(questions);
-    } catch (error) {
-      console.error("Error fetching quiz questions for class:", error);
-      res.status(500).json({ message: "Failed to fetch quiz questions" });
-    }
-  });
 
   // Grade reflection response
   app.put('/api/teacher/reflection-responses/:responseId/grade', requireAuth, async (req: any, res) => {
@@ -1939,38 +1876,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update quiz question answer
-  app.put('/api/teacher/quiz-questions/:questionId/answer', requireAuth, async (req: any, res) => {
-    try {
-      const userId = req.currentUser.id;
-      const user = await storage.getUser(userId);
-      
-      if (user?.role !== 'teacher') {
-        return res.status(403).json({ message: "Only teachers can update quiz answers" });
-      }
-
-      const questionId = parseInt(req.params.questionId);
-      const { correctAnswer, explanation } = req.body;
-
-      // Update the quiz question with correct answer and explanation
-      const [updatedQuestion] = await db
-        .update(quizQuestions)
-        .set({
-          correctAnswer: correctAnswer,
-          explanation: explanation || null,
-        })
-        .where(eq(quizQuestions.id, questionId))
-        .returning();
-
-      if (!updatedQuestion) {
-        return res.status(404).json({ message: "Quiz question not found" });
-      }
-
-      res.json(updatedQuestion);
-    } catch (error) {
-      console.error("Error updating quiz answer:", error);
-      res.status(500).json({ message: "Failed to update quiz answer" });
-    }
-  });
 
   // Class Announcements API endpoints
 
