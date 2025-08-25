@@ -16,6 +16,7 @@ import Textbook from "@/pages/textbook";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MyCoursesPage from "@/pages/my-courses";
+import Assessment from "@/pages/assessment";
 import ProgressPage from "@/pages/progress";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/quiz/:id" component={Quiz} />
           <Route path="/teacher" component={TeacherDashboard} />
           <Route path="/textbook" component={Textbook} />
+          <Route path="/assessment" component={Assessment} />
         </>
       )}
       <Route component={NotFound} />
