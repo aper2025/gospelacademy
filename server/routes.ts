@@ -939,6 +939,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a class
+  app.delete('/api/teacher/classes/:classId', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.currentUser.id;
+      const classId = parseInt(req.params.classId);
+      
+      // Verify teacher owns this class
+      const teacherClass = await db.select()
+        .from(teacherClasses)
+        .where(and(
+          eq(teacherClasses.id, classId),
+          eq(teacherClasses.teacherId, userId)
+        ))
+        .limit(1);
+      
+      if (teacherClass.length === 0) {
+        return res.status(403).json({ message: "You don't have permission to delete this class" });
+      }
+      
+      // Delete the class (this will cascade to enrollments)
+      await db.delete(teacherClasses)
+        .where(eq(teacherClasses.id, classId));
+      
+      res.json({ message: "Class deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      res.status(500).json({ message: "Failed to delete class" });
+    }
+  });
+
   app.post('/api/teacher/classes', requireAuth, async (req: any, res) => {
     try {
       const userId = req.currentUser.id;

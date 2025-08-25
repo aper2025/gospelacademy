@@ -268,6 +268,38 @@ export default function TeacherDashboard() {
     },
   });
 
+  const deleteClassMutation = useMutation({
+    mutationFn: async (classId: number) => {
+      return await apiRequest('DELETE', `/api/teacher/classes/${classId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/classes"] });
+      setSelectedClassId(null);
+      toast({
+        title: "Success",
+        description: "Class deleted successfully",
+      });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete class. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -494,6 +526,19 @@ export default function TeacherDashboard() {
                         >
                           <Users className="h-4 w-4 mr-2" />
                           Manage Students
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete "${cls.className}"? This cannot be undone.`)) {
+                              deleteClassMutation.mutate(cls.id);
+                            }
+                          }}
+                          disabled={deleteClassMutation.isPending}
+                          data-testid={`button-delete-class-${cls.id}`}
+                        >
+                          Delete
                         </Button>
                       </div>
                     </div>
