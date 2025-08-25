@@ -958,7 +958,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You don't have permission to delete this class" });
       }
       
-      // Delete the class (this will cascade to enrollments)
+      // Delete all related records first to avoid foreign key constraints
+      // 1. Delete class announcements
+      await db.delete(classAnnouncements)
+        .where(eq(classAnnouncements.classId, classId));
+      
+      // 2. Delete student enrollments
+      await db.delete(teacherClassStudents)
+        .where(eq(teacherClassStudents.classId, classId));
+      
+      // 3. Delete reflection responses for this class  
+      // Note: reflection responses don't have classId directly, would need to join through users who are in this class
+      // For now, leaving this commented out as it's complex and may not be necessary
+      // await db.delete(reflectionResponses)
+      //   .where(eq(reflectionResponses.classId, classId));
+      
+      // 4. Finally delete the class itself
       await db.delete(teacherClasses)
         .where(eq(teacherClasses.id, classId));
       
