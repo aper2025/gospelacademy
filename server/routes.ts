@@ -1869,15 +1869,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all quiz questions for this class's course
-      const questions = await db
+      const rawQuestions = await db
         .select({
           id: quizQuestions.id,
           quizId: quizQuestions.quizId,
           question: quizQuestions.question,
-          optionA: quizQuestions.optionA,
-          optionB: quizQuestions.optionB,
-          optionC: quizQuestions.optionC,
-          optionD: quizQuestions.optionD,
+          options: quizQuestions.options,
           correctAnswer: quizQuestions.correctAnswer,
           explanation: quizQuestions.explanation,
           quizTitle: quizzes.title,
@@ -1889,6 +1886,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .leftJoin(units, eq(lessons.unitId, units.id))
         .where(eq(units.courseId, teacherClass[0].courseId))
         .orderBy(quizzes.lessonId, quizQuestions.orderIndex);
+
+      // Transform the questions to extract individual options
+      const questions = rawQuestions.map(q => ({
+        ...q,
+        optionA: q.options?.a || '',
+        optionB: q.options?.b || '',
+        optionC: q.options?.c || '',
+        optionD: q.options?.d || '',
+      }));
 
       res.json(questions);
     } catch (error) {
