@@ -94,7 +94,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md">
         <Card className="shadow-xl">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Ascent Learning</CardTitle>
+            <CardTitle className="text-2xl font-bold">The Gospel Academy</CardTitle>
             <CardDescription>
               Access your courses and learning materials
             </CardDescription>

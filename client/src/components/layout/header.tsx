@@ -47,7 +47,7 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0">
-              <h1 className="text-2xl font-bold text-primary">Ascent Learning</h1>
+              <h1 className="text-2xl font-bold text-primary">The Gospel Academy</h1>
             </div>
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-gray-900 dark:text-white hover:text-primary px-3 py-2 text-sm font-medium border-b-2 border-primary">

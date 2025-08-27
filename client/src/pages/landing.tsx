@@ -11,7 +11,7 @@ export default function Landing() {
         <div className="relative px-4 py-24 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="text-center text-white">
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-              Ascent Learning
+              The Gospel Academy
             </h1>
             <p className="mt-6 text-lg leading-8 text-blue-100">
               Elevate your learning experience with comprehensive courses and interactive content
