@@ -18,12 +18,16 @@ import NotFound from "@/pages/not-found";
 import MyCoursesPage from "@/pages/my-courses";
 import Assessment from "@/pages/assessment";
 import ProgressPage from "@/pages/progress";
+import EnglishForFrenchSpeakers from "@/pages/english-for-french-speakers";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
+      {/* Public marketing pages — always accessible */}
+      <Route path="/english-for-french-speakers" component={EnglishForFrenchSpeakers} />
+
       {isLoading || !isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />
