@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  PARENT
+  STUDENT
+  TEACHER
+}
+
+enum Pathway {
+  ADVANCED
+  STANDARD
+  VOCATIONAL
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  DROPPED
+}
+
+enum AssessmentType {
+  FORMATIVE
+  SUMMATIVE
+}
+
+enum LessonType {
+  INSTRUCTION
+  PRACTICE
+  PROJECT
+  REVIEW
+  ASSESSMENT
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum Plan {
+  SINGLE
+  FAMILY
+  SCHOOL
+}
+
+enum ProgressStatus {
+  STARTED
+  COMPLETED
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  name                 String
+  role                 Role                  @default(STUDENT)
+  parentId             String?
+  // Student profile fields (set when a parent adds a student)
+  pathway              Pathway?
+  gradeLevel           Int?
+  schedulingOption     String?
+  dateOfBirth          DateTime?
+  isBeta               Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  enrollments          Enrollment[]
+  assessments          Assessment[]
+  grades               Grade[]
+  tutorSessions        TutorSession[]
+  notifications        Notification[]
+  subscription         Subscription?
+  lessonProgress       LessonProgress[]
+  feedback             Feedback[]
+  uploadedResources    AdminResource[]       @relation("UploadedResources")
+  portfolioSubmissions PortfolioSubmission[]
+  extensionAttempts    ExtensionAttempt[]
+  lessonIssues         LessonIssue[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String
+  stripeSubscriptionId String             @unique
+  stripePriceId        String
+  status               SubscriptionStatus @default(ACTIVE)
+  plan                 Plan
+  currentPeriodEnd     DateTime
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id])
+}
+
+model Course {
+  id            String       @id @default(cuid())
+  title         String
+  subject       String
+  gradeLevelMin Int
+  gradeLevelMax Int
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  units         Unit[]
+  enrollments   Enrollment[]
+}
+
+model Unit {
+  id         String   @id @default(cuid())
+  courseId   String
+  unitNumber Int
+  title      String
+  weekStart  Int
+  weekEnd    Int
+  createdAt  DateTime @default(now())
+  course     Course   @relation(fields: [courseId], references: [id])
+  lessons    Lesson[]
+
+  @@index([courseId, unitNumber])
+}
+
+model Lesson {
+  id                   String                @id @default(cuid())
+  unitId               String
+  weekNumber           Int
+  title                String
+  type                 LessonType
+  content              Json
+  createdAt            DateTime              @default(now())
+  unit                 Unit                  @relation(fields: [unitId], references: [id])
+  assessments          Assessment[]
+  tutorSessions        TutorSession[]
+  progress             LessonProgress[]
+  adminResources       AdminResource[]
+  portfolioSubmissions PortfolioSubmission[]
+  extensionAttempts    ExtensionAttempt[]
+  lessonIssues         LessonIssue[]
+
+  @@unique([unitId, weekNumber])
+}
+
+model Enrollment {
+  id        String           @id @default(cuid())
+  studentId String
+  courseId  String
+  pathway   Pathway          @default(STANDARD)
+  startDate DateTime         @default(now())
+  status    EnrollmentStatus @default(ACTIVE)
+  student   User             @relation(fields: [studentId], references: [id])
+  course    Course           @relation(fields: [courseId], references: [id])
+
+  @@index([studentId, courseId, status])
+}
+
+model Assessment {
+  id        String         @id @default(cuid())
+  lessonId  String
+  studentId String
+  type      AssessmentType
+  prompt    String
+  rubric    Json
+  response  String? // Student's submitted response
+  pathway   Pathway?
+  createdAt DateTime       @default(now())
+  lesson    Lesson         @relation(fields: [lessonId], references: [id])
+  student   User           @relation(fields: [studentId], references: [id])
+  grades    Grade[]
+
+  @@index([studentId, createdAt])
+  @@index([lessonId])
+}
+
+model Grade {
+  id           String     @id @default(cuid())
+  assessmentId String
+  studentId    String
+  score        Float
+  feedback     String // JSON string of GradeMetadata
+  gradedBy     String     @default("ai") // "ai" or user ID for manual
+  attempt      Int        @default(1)
+  gradedAt     DateTime   @default(now())
+  assessment   Assessment @relation(fields: [assessmentId], references: [id])
+  student      User       @relation(fields: [studentId], references: [id])
+
+  @@index([studentId, gradedAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // "grade_posted" | "assessment_submitted" | "hint_level_4" | "lesson_complete"
+  title     String
+  message   String
+  data      Json? // Extra metadata (studentId, courseId, etc.)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model LessonProgress {
+  id          String         @id @default(cuid())
+  studentId   String
+  lessonId    String
+  status      ProgressStatus @default(STARTED)
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime       @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, status])
+}
+
+model TutorSession {
+  id         String   @id @default(cuid())
+  studentId  String
+  lessonId   String
+  messages   Json
+  metadata   Json?
+  pathway    Pathway
+  tokenCount Int      @default(0)
+  startedAt  DateTime @default(now())
+  student    User     @relation(fields: [studentId], references: [id])
+  lesson     Lesson   @relation(fields: [lessonId], references: [id])
+
+  @@index([studentId, startedAt])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String // "content" | "tutor" | "ui" | "general"
+  rating    Int // 1-5 stars
+  message   String
+  page      String? // URL path where feedback was submitted
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AdminResource {
+  id          String   @id @default(cuid())
+  lessonId    String
+  title       String
+  description String?
+  fileUrl     String
+  fileType    String // MIME type, e.g. "application/pdf", "video/mp4"
+  fileSize    Int // bytes
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id])
+  uploader    User     @relation("UploadedResources", fields: [uploadedBy], references: [id])
+
+  @@index([lessonId])
+}
+
+model PortfolioSubmission {
+  id          String    @id @default(cuid())
+  studentId   String
+  lessonId    String
+  title       String
+  description String?
+  textContent String? // Written reports, reflections
+  fileUrl     String? // R2 URL for uploaded artifacts
+  fileType    String? // MIME type
+  fileSize    Int? // bytes
+  status      String    @default("draft") // draft | submitted | graded
+  submittedAt DateTime?
+  grade       Int? // 0-100 score when graded
+  feedback    String? // Teacher/AI feedback
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  student User   @relation(fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, status])
+}
+
+enum IssueStatus {
+  OPEN
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+model LessonIssue {
+  id          String      @id @default(cuid())
+  lessonId    String
+  userId      String
+  category    String // "content_error" | "typo" | "broken_link" | "suggestion" | "other"
+  description String
+  status      IssueStatus @default(OPEN)
+  adminNote   String?
+  createdAt   DateTime    @default(now())
+  resolvedAt  DateTime?
+
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([lessonId, status])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ExtensionAttempt {
+  id          String   @id @default(cuid())
+  studentId   String
+  lessonId    String
+  attempted   Boolean  @default(true) // Student wrote an attempt
+  revealed    Boolean  @default(false) // Student viewed the solution
+  attemptedAt DateTime @default(now())
+
+  student User   @relation(fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+}
